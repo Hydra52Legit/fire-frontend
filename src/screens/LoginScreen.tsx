@@ -12,10 +12,10 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../types/navigation';
+import { useAuth } from '../contexts/AuthContext';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -24,6 +24,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigation = useNavigation<LoginScreenNavigationProp>();
+  const { login } = useAuth();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -34,19 +35,11 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      await AsyncStorage.setItem('userToken', 'demo-token-123');
-      
-      // Проверяем, установлен ли уже PIN-код
-      const pinSet = await AsyncStorage.getItem('pinCodeSet');
-      if (pinSet === 'true') {
-        navigation.navigate('PinCode');
-      } else {
-        // Первый вход - устанавливаем PIN-код
-        navigation.navigate('PinCode');
-      }
+      await login(email, password);
+      // После успешного логина автоматически переходим на Tabs через Context
+      // PIN-код временно отключен для упрощения
     } catch (error) {
-      Alert.alert('Ошибка', 'Не удалось войти в систему');
+      Alert.alert('Ошибка', 'Не удалось войти в систему. Проверьте email и пароль.');
     } finally {
       setIsLoading(false);
     }
@@ -65,6 +58,7 @@ export default function LoginScreen() {
         <TextInput
           style={styles.input}
           placeholder="Email"
+          placeholderTextColor="#666"
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -75,6 +69,7 @@ export default function LoginScreen() {
         <TextInput
           style={styles.input}
           placeholder="Пароль"
+          placeholderTextColor="#666"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -103,7 +98,7 @@ export default function LoginScreen() {
         </TouchableOpacity>
 
         <Text style={styles.demoText}>
-          Для демо используйте любые email и пароль
+          Для демо используйте: admin@fireinspection.ru / любой пароль
         </Text>
       </View>
     </KeyboardAvoidingView>
@@ -113,7 +108,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#000', // Черный фон
   },
   content: {
     flex: 1,
@@ -129,25 +124,26 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 10,
-    color: '#333',
+    color: '#fff', // Белый текст
   },
   subtitle: {
     fontSize: 18,
     textAlign: 'center',
     marginBottom: 40,
-    color: '#666',
+    color: '#fff', // Белый текст вместо серого
   },
   input: {
-    backgroundColor: 'white',
+    backgroundColor: '#000', // Черный фон полей
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#fff', // Белые границы
     padding: 15,
     borderRadius: 10,
     marginBottom: 15,
     fontSize: 16,
+    color: '#fff', // Белый текст в полях
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#fff', // Белый фон кнопки
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
@@ -155,9 +151,10 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+    backgroundColor: '#666', // Серый для disabled состояния
   },
   buttonText: {
-    color: 'white',
+    color: '#000', // Черный текст на кнопке
     fontSize: 18,
     fontWeight: '600',
   },
@@ -166,17 +163,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   registerLinkText: {
-    color: '#666',
+    color: '#fff', // Белый текст
     fontSize: 16,
   },
   registerLinkBold: {
-    color: '#007AFF',
+    color: '#fff', // Белый текст вместо синего
     fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   demoText: {
     textAlign: 'center',
     marginTop: 20,
-    color: '#666',
+    color: '#fff', // Белый текст
     fontSize: 14,
   },
 });

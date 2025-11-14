@@ -1,16 +1,21 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { View, ActivityIndicator, Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 
+import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
+import RegisterScreen from './src/screens/RegisterScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import ObjectsScreen from './src/screens/ObjectsScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
 import PinCodeScreen from './src/screens/PinCodeScreen';
-import RegisterScreen from './src/screens/RegisterScreen'; // Добавим экран регистрации
+import ObjectDetailsScreen from './src/screens/ObjectDetails';
+import AddEditObjectScreen from './src/screens/ AddEditObjectScreen'; 
+import FireSafetyScreen from './src/screens/FireSafetyScreen'; 
+
 
 import { RootStackParamList, TabParamList } from './src/types/navigation';
 
@@ -36,7 +41,7 @@ function TabNavigator() {
         component={HomeScreen}
         options={{
           title: 'Карта',
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+          tabBarIcon: ({ color, size }) => (
             <Ionicons name="map" size={size} color={color} />
           ),
         }}
@@ -46,8 +51,18 @@ function TabNavigator() {
         component={ObjectsScreen}
         options={{
           title: 'Объекты',
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+          tabBarIcon: ({ color, size }) => (
             <Ionicons name="business" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen 
+        name="Profile" 
+        component={ProfileScreen}
+        options={{
+          title: 'Профиль',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person" size={size} color={color} />
           ),
         }}
       />
@@ -55,82 +70,57 @@ function TabNavigator() {
   );
 }
 
-type AuthState = 'unauthorized' | 'needs_pin' | 'authorized';
-
-export default function App() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [authState, setAuthState] = useState<AuthState>('unauthorized');
-
-  // Функция для сброса авторизации (для отладки)
-  const resetAuth = async () => {
-    await AsyncStorage.removeItem('userToken');
-    await AsyncStorage.removeItem('pinCodeSet');
-    await AsyncStorage.removeItem('userPin');
-    setAuthState('unauthorized');
+function AppContent() {
+  // const { user, isLoading } = useAuth();
+  const isLoading = false;
+  const user = {
+    id: '1',
+    email: 'admin@fireinspection.ru',
+    fullName: 'Иванов Алексей Петрович',
+    position: 'Главный инспектор',
+    role: 'admin',
+    phone: '+7 (999) 123-45-67',
+    assignedObjects: ['1', '2', '3'],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
-
-  useEffect(() => {
-    const checkAuthStatus = async () => {
-      try {
-        // Для отладки - раскомментируйте следующую строку чтобы сбросить авторизацию
-        await resetAuth();
-
-        const token = await AsyncStorage.getItem('userToken');
-        const pinSet = await AsyncStorage.getItem('pinCodeSet');
-        
-        console.log('🔐 Auth check:', { 
-          hasToken: !!token, 
-          pinSet: pinSet,
-          authState: 'checking...' 
-        });
-        
-        if (token) {
-          if (pinSet === 'true') {
-            setAuthState('needs_pin');
-          } else {
-            setAuthState('authorized');
-          }
-        } else {
-          setAuthState('unauthorized');
-        }
-      } catch (error) {
-        console.error('Auth check error:', error);
-        setAuthState('unauthorized');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkAuthStatus();
-  }, []);
-
+  
   if (isLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' }}>
         <ActivityIndicator size="large" color="#fff" />
-        <Text style={{ color: '#fff', marginTop: 10 }}>Проверка авторизации...</Text>
+        <Text style={{ color: '#fff', marginTop: 10 }}>Загрузка...</Text>
       </View>
     );
   }
 
-  console.log('🎯 Current authState:', authState);
-
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {authState === 'unauthorized' && (
-          <>
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="Register" component={RegisterScreen} />
-          </>
-        )}
-        {authState === 'needs_pin' && (
-          <Stack.Screen name="PinCode" component={PinCodeScreen} />
-        )}
-        {authState === 'authorized' && (
-          <Stack.Screen name="Tabs" component={TabNavigator} />
-        )}
+      <Stack.Navigator 
+        screenOptions={{ 
+          headerShown: false,
+          animation: 'slide_from_right' // Плавная анимация переходов
+        }}
+      >
+        {/* Основные экраны */}
+        <Stack.Screen name="Tabs" component={TabNavigator} />
+        <Stack.Screen name="ObjectDetails" component={ObjectDetailsScreen} />
+        <Stack.Screen name="AddEditObject" component={AddEditObjectScreen} />
+        <Stack.Screen name="FireSafety" component={FireSafetyScreen} />
+        
+        {/* Экран авторизации */}
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Register" component={RegisterScreen} />
+        <Stack.Screen name="PinCode" component={PinCodeScreen} />
       </Stack.Navigator>
     </NavigationContainer>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }

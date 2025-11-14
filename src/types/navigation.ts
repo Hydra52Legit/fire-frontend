@@ -3,14 +3,14 @@ export type RootStackParamList = {
   Register: undefined;
   Tabs: undefined;
   PinCode: undefined;
-  AddObject: undefined;
   ObjectDetails: { objectId: string };
-  EditObject: { objectId: string };
+  AddEditObject: { objectId?: string }; // undefined = создание нового
+  FireSafety: { objectId: string };
+  Reports: undefined;
 };
 
 export type TabParamList = {
   Home: undefined;
   Objects: undefined;
-  Admin: undefined;
   Profile: undefined;
 };

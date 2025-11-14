@@ -9,6 +9,8 @@ import {
   Modal,
   Alert,
   Dimensions,
+  StatusBar,
+  Platform,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,13 +19,15 @@ import DataService from '../services/dataService';
 import { InspectionObject } from '../types';
 
 const { width, height } = Dimensions.get('window');
+const isSmallScreen = height < 700;
+const ASPECT_RATIO = width / height;
 
 // Координаты центра Стерлитамака
 const STERLITAMAK_REGION: Region = {
   latitude: 53.630,
   longitude: 55.950,
   latitudeDelta: 0.0922,
-  longitudeDelta: 0.0421,
+  longitudeDelta: 0.0922 * ASPECT_RATIO,
 };
 
 export default function HomeScreen() {
@@ -35,6 +39,7 @@ export default function HomeScreen() {
   const [selectedObject, setSelectedObject] = useState<InspectionObject | null>(null);
   const [mapRegion, setMapRegion] = useState<Region>(STERLITAMAK_REGION);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadObjects();
@@ -46,19 +51,37 @@ export default function HomeScreen() {
   }, [searchQuery, objects]);
 
   const loadObjects = async () => {
-    const objectsData = await DataService.getObjects();
-    setObjects(objectsData);
-    setFilteredObjects(objectsData);
+    try {
+      setIsLoading(true);
+      const objectsData = await DataService.getObjects();
+      setObjects(objectsData);
+      setFilteredObjects(objectsData);
+    } catch (error) {
+      Alert.alert('Ошибка', 'Не удалось загрузить объекты');
+      console.error('Error loading objects:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const requestLocationPermission = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === 'granted') {
-        const location = await Location.getCurrentPositionAsync({});
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
         setUserLocation({
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
+        });
+        
+        // Центрируем карту на пользователе с небольшим зумом
+        setMapRegion({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+          latitudeDelta: 0.0422,
+          longitudeDelta: 0.0422 * ASPECT_RATIO,
         });
       }
     } catch (error) {
@@ -84,12 +107,30 @@ export default function HomeScreen() {
     setSelectedObject(object);
     Alert.alert(
       object.name,
-      `Адрес: ${object.actualAddress}\nТип: ${getObjectTypeLabel(object.type)}\nКласс опасности: ${object.fireSafetyClass}`,
+      `📍 Адрес: ${object.actualAddress}\n🏢 Тип: ${getObjectTypeLabel(object.type)}\n🛡️ Класс опасности: ${object.fireSafetyClass}\n📊 Проверок: ${object.inspections.length}`,
       [
         { text: 'Закрыть', style: 'cancel' },
-        { text: 'Подробнее', onPress: () => {/* Навигация к деталям */} }
+        { 
+          text: 'Подробнее', 
+          onPress: () => {
+            // Навигация к деталям объекта
+            // navigation.navigate('ObjectDetails', { objectId: object.id });
+          }
+        }
       ]
     );
+  };
+
+  const handleObjectSelect = (object: InspectionObject) => {
+    setMapRegion({
+      ...mapRegion,
+      latitude: object.coordinates.latitude,
+      longitude: object.coordinates.longitude,
+      latitudeDelta: 0.005,
+      longitudeDelta: 0.005 * ASPECT_RATIO,
+    });
+    setSearchVisible(false);
+    setSearchQuery('');
   };
 
   const getObjectTypeLabel = (type: string) => {
@@ -106,12 +147,26 @@ export default function HomeScreen() {
   };
 
   const getStatusColor = (object: InspectionObject) => {
-    // Логика определения цвета маркера на основе статуса проверок
     const hasExpiredDocuments = object.documents.some(doc => 
       doc.expirationDate && new Date(doc.expirationDate) < new Date()
     );
     
-    return hasExpiredDocuments ? '#ff0000' : '#00ff00';
+    const hasFailedInspections = object.inspections.some(insp => 
+      insp.result === 'failed'
+    );
+
+    if (hasExpiredDocuments || hasFailedInspections) return '#FF3B30'; // Красный - проблемы
+    if (object.inspections.length === 0) return '#FF9500'; // Оранжевый - нет проверок
+    return '#34C759'; // Зеленый - все в порядке
+  };
+
+  const getStatusIcon = (object: InspectionObject) => {
+    const hasExpiredDocuments = object.documents.some(doc => 
+      doc.expirationDate && new Date(doc.expirationDate) < new Date()
+    );
+    
+    if (hasExpiredDocuments) return 'warning';
+    return 'business';
   };
 
   const MODULES = [
@@ -120,7 +175,7 @@ export default function HomeScreen() {
       title: 'Реестр объектов',
       icon: 'business',
       description: 'Учет всех проверяемых объектов',
-      onPress: () => {/* Навигация к реестру */},
+      route: 'Objects',
     },
     {
       id: 2,
@@ -142,12 +197,37 @@ export default function HomeScreen() {
       icon: 'add-circle',
       description: 'Доступно администраторам',
       adminOnly: true,
-      onPress: () => {/* Навигация к добавлению объекта */},
+      route: 'AddEditObject',
     },
   ];
 
+  const handleModulePress = (module: any) => {
+    if (module.onPress) {
+      module.onPress();
+    } else if (module.route) {
+      // navigation.navigate(module.route);
+      setModulesModalVisible(false);
+    }
+    setModulesModalVisible(false);
+  };
+
+  const centerOnUser = async () => {
+    if (userLocation) {
+      setMapRegion({
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+        latitudeDelta: 0.0422,
+        longitudeDelta: 0.0422 * ASPECT_RATIO,
+      });
+    } else {
+      await requestLocationPermission();
+    }
+  };
+
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#000" />
+      
       {/* Карта */}
       <MapView
         style={styles.map}
@@ -155,7 +235,9 @@ export default function HomeScreen() {
         region={mapRegion}
         customMapStyle={mapStyle}
         showsUserLocation={true}
-        showsMyLocationButton={true}
+        showsMyLocationButton={false}
+        showsCompass={true}
+        toolbarEnabled={false}
       >
         {filteredObjects.map((obj) => (
           <Marker
@@ -166,24 +248,41 @@ export default function HomeScreen() {
             onPress={() => handleMarkerPress(obj)}
           >
             <View style={[styles.marker, { backgroundColor: getStatusColor(obj) }]}>
-              <Ionicons name="business" size={16} color="#000" />
+              <Ionicons name={getStatusIcon(obj) as any} size={16} color="#000" />
             </View>
           </Marker>
         ))}
       </MapView>
 
-      {/* Поисковая панель */}
-      <View style={styles.searchContainer}>
-        <TouchableOpacity style={styles.searchButton} onPress={() => setSearchVisible(true)}>
-          <Ionicons name="search" size={20} color="#000" />
-          <Text style={styles.searchButtonText}>Поиск объектов...</Text>
-        </TouchableOpacity>
-        
+      {/* Панель управления */}
+      <View style={styles.controlsContainer}>
+        {/* Поисковая панель */}
+        <View style={styles.searchContainer}>
+          <TouchableOpacity 
+            style={styles.searchButton} 
+            onPress={() => setSearchVisible(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="search" size={20} color="#666" />
+            <Text style={styles.searchButtonText}>Поиск объектов...</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.modulesButton}
+            onPress={() => setModulesModalVisible(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="apps" size={22} color="#007AFF" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Кнопка центрирования на пользователе */}
         <TouchableOpacity 
-          style={styles.modulesButton}
-          onPress={() => setModulesModalVisible(true)}
+          style={styles.locationButton}
+          onPress={centerOnUser}
+          activeOpacity={0.7}
         >
-          <Ionicons name="apps" size={20} color="#000" />
+          <Ionicons name="navigate" size={22} color="#007AFF" />
         </TouchableOpacity>
       </View>
 
@@ -195,44 +294,64 @@ export default function HomeScreen() {
         onRequestClose={() => setSearchVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, styles.searchModal]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Поиск объектов</Text>
-              <TouchableOpacity onPress={() => setSearchVisible(false)}>
+              <TouchableOpacity 
+                onPress={() => setSearchVisible(false)}
+                style={styles.closeButton}
+              >
                 <Ionicons name="close" size={24} color="#000" />
               </TouchableOpacity>
             </View>
             
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Введите название объекта или адрес..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholderTextColor="#666"
-            />
-            
-            <ScrollView style={styles.searchResults}>
-              {filteredObjects.map((obj) => (
-                <TouchableOpacity 
-                  key={obj.id} 
-                  style={styles.searchResultItem}
-                  onPress={() => {
-                    setMapRegion({
-                      ...mapRegion,
-                      latitude: obj.coordinates.latitude,
-                      longitude: obj.coordinates.longitude,
-                    });
-                    setSearchVisible(false);
-                  }}
-                >
-                  <Ionicons name="business" size={20} color="#000" />
-                  <View style={styles.searchResultInfo}>
-                    <Text style={styles.searchResultName}>{obj.name}</Text>
-                    <Text style={styles.searchResultAddress}>{obj.actualAddress}</Text>
-                    <Text style={styles.searchResultType}>{getObjectTypeLabel(obj.type)}</Text>
-                  </View>
+            <View style={styles.searchInputContainer}>
+              <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Введите название объекта или адрес..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholderTextColor="#666"
+                autoFocus={true}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Ionicons name="close-circle" size={20} color="#666" />
                 </TouchableOpacity>
-              ))}
+              )}
+            </View>
+            
+            <ScrollView 
+              style={styles.searchResults}
+              showsVerticalScrollIndicator={false}
+            >
+              {filteredObjects.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Ionicons name="search" size={48} color="#E5E5EA" />
+                  <Text style={styles.emptyStateText}>
+                    {searchQuery ? 'Объекты не найдены' : 'Нет объектов для отображения'}
+                  </Text>
+                </View>
+              ) : (
+                filteredObjects.map((obj) => (
+                  <TouchableOpacity 
+                    key={obj.id} 
+                    style={styles.searchResultItem}
+                    onPress={() => handleObjectSelect(obj)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.objectStatus, { backgroundColor: getStatusColor(obj) }]} />
+                    <Ionicons name="business" size={20} color="#000" style={styles.objectIcon} />
+                    <View style={styles.searchResultInfo}>
+                      <Text style={styles.searchResultName} numberOfLines={1}>{obj.name}</Text>
+                      <Text style={styles.searchResultAddress} numberOfLines={1}>{obj.actualAddress}</Text>
+                      <Text style={styles.searchResultType}>{getObjectTypeLabel(obj.type)}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#666" />
+                  </TouchableOpacity>
+                ))
+              )}
             </ScrollView>
           </View>
         </View>
@@ -246,29 +365,38 @@ export default function HomeScreen() {
         onRequestClose={() => setModulesModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, styles.modulesModal]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Модули системы</Text>
-              <TouchableOpacity onPress={() => setModulesModalVisible(false)}>
+              <TouchableOpacity 
+                onPress={() => setModulesModalVisible(false)}
+                style={styles.closeButton}
+              >
                 <Ionicons name="close" size={24} color="#000" />
               </TouchableOpacity>
             </View>
             
-            <ScrollView style={styles.modulesList}>
+            <ScrollView 
+              style={styles.modulesList}
+              showsVerticalScrollIndicator={false}
+            >
               {MODULES.map((module) => (
                 <TouchableOpacity
                   key={module.id}
                   style={styles.moduleItem}
-                  onPress={module.onPress}
+                  onPress={() => handleModulePress(module)}
+                  activeOpacity={0.7}
                 >
                   <View style={styles.moduleIcon}>
-                    <Ionicons name={module.icon as any} size={24} color="#000" />
+                    <Ionicons name={module.icon as any} size={24} color="#007AFF" />
                   </View>
                   <View style={styles.moduleInfo}>
                     <Text style={styles.moduleTitle}>{module.title}</Text>
                     <Text style={styles.moduleDescription}>{module.description}</Text>
                     {module.adminOnly && (
-                      <Text style={styles.adminBadge}>Только для администраторов</Text>
+                      <View style={styles.adminBadge}>
+                        <Text style={styles.adminBadgeText}>Только для администраторов</Text>
+                      </View>
                     )}
                   </View>
                   <Ionicons name="chevron-forward" size={20} color="#666" />
@@ -282,7 +410,7 @@ export default function HomeScreen() {
   );
 }
 
-// Черно-белый стиль для карты
+// Темный стиль для карты
 const mapStyle = [
   {
     elementType: "geometry",
@@ -296,6 +424,16 @@ const mapStyle = [
     elementType: "labels.text.stroke",
     stylers: [{ color: "#000000" }],
   },
+  {
+    featureType: "road",
+    elementType: "geometry",
+    stylers: [{ color: "#2c2c2c" }],
+  },
+  {
+    featureType: "water",
+    elementType: "geometry",
+    stylers: [{ color: "#1a1a1a" }],
+  },
 ];
 
 const styles = StyleSheet.create({
@@ -307,36 +445,64 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  searchContainer: {
+  controlsContainer: {
     position: 'absolute',
-    top: 50,
-    left: 20,
-    right: 20,
+    top: Platform.OS === 'ios' ? 60 : 40,
+    left: 16,
+    right: 16,
+  },
+  searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 12,
   },
   searchButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingVertical: isSmallScreen ? 12 : 14,
     borderRadius: 25,
-    marginRight: 10,
+    marginRight: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   searchButtonText: {
     marginLeft: 10,
     color: '#666',
-    fontSize: 16,
+    fontSize: isSmallScreen ? 15 : 16,
+    fontWeight: '500',
   },
   modulesButton: {
     backgroundColor: '#fff',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: isSmallScreen ? 44 : 48,
+    height: isSmallScreen ? 44 : 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  locationButton: {
+    backgroundColor: '#fff',
+    width: isSmallScreen ? 44 : 48,
+    height: isSmallScreen ? 44 : 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   modalOverlay: {
     flex: 1,
@@ -347,102 +513,160 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: height * 0.8,
+    maxHeight: height * (isSmallScreen ? 0.75 : 0.8),
+  },
+  searchModal: {
+    maxHeight: height * (isSmallScreen ? 0.7 : 0.75),
+  },
+  modulesModal: {
+    maxHeight: height * (isSmallScreen ? 0.65 : 0.7),
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: isSmallScreen ? 16 : 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#f0f0f0',
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: isSmallScreen ? 18 : 20,
     fontWeight: 'bold',
     color: '#000',
   },
-  searchInput: {
-    backgroundColor: '#f5f5f5',
+  closeButton: {
+    padding: 4,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f8f8',
     margin: 20,
-    padding: 15,
-    borderRadius: 10,
-    fontSize: 16,
+    marginBottom: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e5ea',
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: isSmallScreen ? 12 : 14,
+    fontSize: isSmallScreen ? 15 : 16,
     color: '#000',
   },
+  searchResults: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: isSmallScreen ? 12 : 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f8f8f8',
+  },
+  objectStatus: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 12,
+  },
+  objectIcon: {
+    marginRight: 12,
+  },
+  searchResultInfo: {
+    flex: 1,
+    marginRight: 8,
+  },
+  searchResultName: {
+    fontSize: isSmallScreen ? 15 : 16,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 2,
+  },
+  searchResultAddress: {
+    fontSize: isSmallScreen ? 13 : 14,
+    color: '#666',
+    marginBottom: 2,
+  },
+  searchResultType: {
+    fontSize: isSmallScreen ? 12 : 13,
+    color: '#999',
+    fontWeight: '500',
+  },
   modulesList: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
   moduleItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 15,
+    paddingVertical: isSmallScreen ? 14 : 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#f8f8f8',
   },
   moduleIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: isSmallScreen ? 44 : 48,
+    height: isSmallScreen ? 44 : 48,
+    borderRadius: isSmallScreen ? 22 : 24,
     backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15,
+    marginRight: 16,
   },
   moduleInfo: {
     flex: 1,
   },
   moduleTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: isSmallScreen ? 16 : 17,
+    fontWeight: '600',
     color: '#000',
     marginBottom: 4,
   },
   moduleDescription: {
-    fontSize: 14,
+    fontSize: isSmallScreen ? 13 : 14,
     color: '#666',
+    lineHeight: isSmallScreen ? 18 : 20,
   },
   adminBadge: {
-    fontSize: 12,
-    color: '#ff0000',
+    backgroundColor: '#FFE5E5',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
     marginTop: 4,
   },
-  searchResults: {
-    maxHeight: 400,
-  },
-  searchResultItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  searchResultInfo: {
-    flex: 1,
-    marginLeft: 15,
-  },
-  searchResultName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 2,
-  },
-  searchResultAddress: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 2,
-  },
-  searchResultType: {
-    fontSize: 12,
-    color: '#999',
+  adminBadgeText: {
+    fontSize: 11,
+    color: '#FF3B30',
+    fontWeight: '500',
   },
   marker: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: isSmallScreen ? 28 : 32,
+    height: isSmallScreen ? 28 : 32,
+    borderRadius: isSmallScreen ? 14 : 16,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#000',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
 });
