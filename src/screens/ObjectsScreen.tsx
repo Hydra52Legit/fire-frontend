@@ -8,18 +8,10 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
-import { TabParamList } from '../types/navigation';
-
-
-
-type ObjectsScreenNavigationProp = NativeStackNavigationProp<TabParamList, 'Objects'>;
-
 export default function ObjectsScreen() {
-  const navigation = useNavigation<ObjectsScreenNavigationProp>();
+  
 
   const objects = [
     {
@@ -62,19 +54,23 @@ export default function ObjectsScreen() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Проверен': return '#34C759';
-      case 'В процессе': return '#007AFF';
-      case 'Требует внимания': return '#FF9500';
-      case 'Просрочен': return '#FF3B30';
-      default: return '#8E8E93';
+      case 'Проверен': return '#00ff00'; // Зеленый
+      case 'В процессе': return '#ffff00'; // Желтый
+      case 'Требует внимания': return '#ff0000'; // Красный
+      case 'Просрочен': return '#ff0000'; // Красный
+      default: return '#666666'; // Серый
     }
+  };
+
+  const getStatusTextColor = (status: string) => {
+    return '#000000'; // Черный текст для всех статусов
   };
 
   const handleObjectPress = (object: any) => {
     Alert.alert(
       object.name,
       `Адрес: ${object.address}\nТип: ${object.type}\nСтатус: ${object.status}\nПоследняя проверка: ${object.lastInspection}\nСледующая проверка: ${object.nextInspection}`,
-      [{ text: 'OK' }]
+      [{ text: 'OK', style: 'default' }]
     );
   };
 
@@ -87,7 +83,7 @@ export default function ObjectsScreen() {
             style={styles.addButton}
             onPress={() => Alert.alert('Добавить объект', 'Функция в разработке')}
           >
-            <Ionicons name="add" size={24} color="white" />
+            <Ionicons name="add" size={24} color="#000" />
           </TouchableOpacity>
         </View>
 
@@ -101,23 +97,25 @@ export default function ObjectsScreen() {
               <View style={styles.objectHeader}>
                 <Text style={styles.objectName}>{object.name}</Text>
                 <View style={[styles.statusBadge, { backgroundColor: getStatusColor(object.status) }]}>
-                  <Text style={styles.statusText}>{object.status}</Text>
+                  <Text style={[styles.statusText, { color: getStatusTextColor(object.status) }]}>
+                    {object.status}
+                  </Text>
                 </View>
               </View>
               
               <View style={styles.objectDetails}>
                 <View style={styles.detailRow}>
-                  <Ionicons name="location" size={16} color="#666" />
+                  <Ionicons name="location" size={16} color="#fff" />
                   <Text style={styles.detailText}>{object.address}</Text>
                 </View>
                 
                 <View style={styles.detailRow}>
-                  <Ionicons name="business" size={16} color="#666" />
+                  <Ionicons name="business" size={16} color="#fff" />
                   <Text style={styles.detailText}>{object.type}</Text>
                 </View>
                 
                 <View style={styles.detailRow}>
-                  <Ionicons name="calendar" size={16} color="#666" />
+                  <Ionicons name="calendar" size={16} color="#fff" />
                   <Text style={styles.detailText}>
                     След. проверка: {object.nextInspection}
                   </Text>
@@ -126,17 +124,17 @@ export default function ObjectsScreen() {
 
               <View style={styles.objectActions}>
                 <TouchableOpacity style={styles.actionButton}>
-                  <Ionicons name="eye" size={18} color="#007AFF" />
+                  <Ionicons name="eye" size={18} color="#fff" />
                   <Text style={styles.actionText}>Просмотр</Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity style={styles.actionButton}>
-                  <Ionicons name="create" size={18} color="#34C759" />
+                  <Ionicons name="create" size={18} color="#fff" />
                   <Text style={styles.actionText}>Редактировать</Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity style={styles.actionButton}>
-                  <Ionicons name="clipboard" size={18} color="#FF9500" />
+                  <Ionicons name="clipboard" size={18} color="#fff" />
                   <Text style={styles.actionText}>Проверить</Text>
                 </TouchableOpacity>
               </View>
@@ -151,7 +149,7 @@ export default function ObjectsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#000', // Черный фон
   },
   scrollView: {
     flex: 1,
@@ -166,18 +164,18 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#fff', // Белый текст
   },
   addButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#fff', // Белый фон
     width: 44,
     height: 44,
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: '#fff',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 3,
   },
@@ -185,14 +183,16 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   objectCard: {
-    backgroundColor: 'white',
+    backgroundColor: '#1a1a1a', // Темно-серый фон карточек
     borderRadius: 12,
     padding: 16,
-    shadowColor: '#000',
+    shadowColor: '#fff',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: '#333', // Темно-серая граница
   },
   objectHeader: {
     flexDirection: 'row',
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
   objectName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: '#fff', // Белый текст
     flex: 1,
     marginRight: 10,
   },
@@ -211,9 +211,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
+    minWidth: 80,
+    alignItems: 'center',
   },
   statusText: {
-    color: 'white',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -228,14 +229,14 @@ const styles = StyleSheet.create({
   detailText: {
     marginLeft: 8,
     fontSize: 14,
-    color: '#666',
+    color: '#ccc', // Светло-серый текст
     flex: 1,
   },
   objectActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: '#333', // Темно-серая граница
     paddingTop: 12,
   },
   actionButton: {
@@ -247,6 +248,6 @@ const styles = StyleSheet.create({
   actionText: {
     marginLeft: 4,
     fontSize: 12,
-    color: '#666',
+    color: '#ccc', // Светло-серый текст
   },
 });

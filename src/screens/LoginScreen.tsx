@@ -34,14 +34,17 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     try {
-      // Имитация API запроса
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Сохраняем токен
       await AsyncStorage.setItem('userToken', 'demo-token-123');
       
-      // Переходим на главный экран
-      navigation.navigate('Tabs');
+      // Проверяем, установлен ли уже PIN-код
+      const pinSet = await AsyncStorage.getItem('pinCodeSet');
+      if (pinSet === 'true') {
+        navigation.navigate('PinCode');
+      } else {
+        // Первый вход - устанавливаем PIN-код
+        navigation.navigate('PinCode');
+      }
     } catch (error) {
       Alert.alert('Ошибка', 'Не удалось войти в систему');
     } finally {
@@ -88,6 +91,15 @@ export default function LoginScreen() {
           ) : (
             <Text style={styles.buttonText}>Войти</Text>
           )}
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.registerLink}
+          onPress={() => navigation.navigate('Register')}
+        >
+          <Text style={styles.registerLinkText}>
+            Нет аккаунта? <Text style={styles.registerLinkBold}>Зарегистрироваться</Text>
+          </Text>
         </TouchableOpacity>
 
         <Text style={styles.demoText}>
@@ -147,6 +159,18 @@ const styles = StyleSheet.create({
   buttonText: {
     color: 'white',
     fontSize: 18,
+    fontWeight: '600',
+  },
+  registerLink: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  registerLinkText: {
+    color: '#666',
+    fontSize: 16,
+  },
+  registerLinkBold: {
+    color: '#007AFF',
     fontWeight: '600',
   },
   demoText: {
