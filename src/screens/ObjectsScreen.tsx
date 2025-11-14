@@ -10,29 +10,16 @@ import {
   TextInput,
   ActivityIndicator,
   Modal,
-  ActionSheetIOS,
-  Platform,
 } from 'react-native';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
-import { TabParamList, RootStackParamList } from '../types/navigation'; // Импортируем оба типа
 import { InspectionObject } from '../types';
 import ObjectService from '../services/objectService';
 import { useAuth } from '../contexts/AuthContext';
 
-// Исправляем тип - Objects находится в TabParamList
-type ObjectsScreenNavigationProp = NativeStackNavigationProp<TabParamList, 'Objects'>;
-
-// Или если нужен доступ к другим экранам Stack, можно использовать composite тип:
-// type ObjectsScreenNavigationProp = CompositeNavigationProp<
-//   BottomTabNavigationProp<TabParamList, 'Objects'>,
-//   NativeStackNavigationProp<RootStackParamList>
-// >;
-
 export default function ObjectsScreen() {
-  const navigation = useNavigation<ObjectsScreenNavigationProp>();
+  const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
   const { user } = useAuth();
 
@@ -81,48 +68,24 @@ export default function ObjectsScreen() {
   };
 
   // Функция для открытия меню действий
-  const handleObjectLongPress = (object: InspectionObject) => {
+  const showActionMenu = (object: InspectionObject) => {
     setSelectedObject(object);
-    
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ['Отмена', 'Редактировать', 'Архивировать', 'Удалить'],
-          destructiveButtonIndex: 3,
-          cancelButtonIndex: 0,
-          userInterfaceStyle: 'light',
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 1) {
-            handleEditObject(object);
-          } else if (buttonIndex === 2) {
-            handleArchiveObject(object);
-          } else if (buttonIndex === 3) {
-            handleDeleteObject(object);
-          }
-        }
-      );
-    } else {
-      setActionModalVisible(true);
-    }
+    setActionModalVisible(true);
   };
 
-  // Редактирование объекта - используем any для навигации к Stack экранам
+  // Редактирование объекта
   const handleEditObject = (object: InspectionObject) => {
-    // @ts-ignore - временно игнорируем проверку типов
     navigation.navigate('AddEditObject', { objectId: object.id });
     setActionModalVisible(false);
   };
 
   // Добавление нового объекта
   const handleAddObject = () => {
-    // @ts-ignore - временно игнорируем проверку типов
     navigation.navigate('AddEditObject', {});
   };
 
   // Просмотр деталей объекта
   const handleObjectPress = (object: InspectionObject) => {
-    // @ts-ignore - временно игнорируем проверку типов
     navigation.navigate('ObjectDetails', { objectId: object.id });
   };
 
@@ -139,7 +102,7 @@ export default function ObjectsScreen() {
           onPress: async () => {
             try {
               await ObjectService.archiveObject(object.id);
-              await loadObjects(); // Перезагружаем список
+              await loadObjects();
               Alert.alert('Успех', 'Объект успешно архивирован');
             } catch (error) {
               Alert.alert('Ошибка', 'Не удалось архивировать объект');
@@ -163,13 +126,8 @@ export default function ObjectsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              // Используем метод удаления из ObjectService
-              if (ObjectService.deleteObject) {
-                await ObjectService.deleteObject(object.id);
-              } else {
-                await ObjectService.archiveObject(object.id);
-              }
-              await loadObjects(); // Перезагружаем список
+              await ObjectService.deleteObject(object.id);
+              await loadObjects();
               Alert.alert('Успех', 'Объект успешно удален');
             } catch (error) {
               Alert.alert('Ошибка', 'Не удалось удалить объект');
@@ -213,14 +171,12 @@ export default function ObjectsScreen() {
       <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
           <Text style={styles.title}>Объекты проверки</Text>
-          {user?.role === 'admin' && (
-            <TouchableOpacity 
-              style={styles.addButton}
-              onPress={handleAddObject}
-            >
-              <Ionicons name="add" size={24} color="#FFFFFF" />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity 
+            style={styles.addButton}
+            onPress={handleAddObject}
+          >
+            <Ionicons name="add" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
 
         {/* Поиск */}
@@ -251,18 +207,16 @@ export default function ObjectsScreen() {
                 key={object.id}
                 style={styles.objectCard}
                 onPress={() => handleObjectPress(object)}
-                onLongPress={() => handleObjectLongPress(object)}
-                delayLongPress={500} // Задержка для long press
+                onLongPress={() => showActionMenu(object)}
+                delayLongPress={500}
               >
-                {/* Контекстное меню для карточки */}
-                {user?.role === 'admin' && (
-                  <TouchableOpacity 
-                    style={styles.contextMenuButton}
-                    onPress={() => handleObjectLongPress(object)}
-                  >
-                    <Ionicons name="ellipsis-vertical" size={16} color="#666" />
-                  </TouchableOpacity>
-                )}
+                {/* Кнопка меню - ВИДИМАЯ И КРУПНАЯ */}
+                <TouchableOpacity 
+                  style={styles.contextMenuButton}
+                  onPress={() => showActionMenu(object)}
+                >
+                  <Ionicons name="ellipsis-vertical" size={20} color="#007AFF" />
+                </TouchableOpacity>
                 
                 <View style={styles.objectHeader}>
                   <Text style={styles.objectName}>{object.name}</Text>
@@ -297,7 +251,7 @@ export default function ObjectsScreen() {
         </View>
       </ScrollView>
 
-      {/* Модальное окно действий (для Android) */}
+      {/* Модальное окно действий */}
       <Modal
         visible={actionModalVisible}
         transparent={true}
@@ -431,21 +385,23 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 12,
     right: 12,
-    padding: 4,
+    padding: 8,
     zIndex: 1,
+    backgroundColor: '#F8F8F8',
+    borderRadius: 6,
   },
   objectHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 12,
+    marginRight: 40, // Место для кнопки меню
   },
   objectName: {
     fontSize: 18,
     fontWeight: '600',
     color: '#000000',
     flex: 1,
-    marginRight: 10,
   },
   statusBadge: {
     paddingHorizontal: 8,

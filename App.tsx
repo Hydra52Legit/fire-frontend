@@ -14,8 +14,15 @@ import ProfileScreen from './src/screens/ProfileScreen';
 import PinCodeScreen from './src/screens/PinCodeScreen';
 import ObjectDetailsScreen from './src/screens/ObjectDetails';
 import AddEditObjectScreen from './src/screens/ AddEditObjectScreen'; 
-import FireSafetyScreen from './src/screens/FireSafetyScreen'; 
+import FireSafetyScreen from './src/screens/FireSafetyScreen';
+import { NotificationProvider } from './src/contexts/NotificationContext';
+import NotificationSettingsScreen from './src/screens/NotificationSettingsScreen';
 
+import ExtinguishersListScreen from './src/screens/ExtinguishersListScreen';
+import AddEditExtinguisherScreen from './src/screens/AddEditinguisherScreen';
+
+import EquipmentListScreen from './src/screens/EquipmentListScreen';
+import AddEditEquipmentScreen from './src/screens/AddEditEquipmentScreen';
 
 import { RootStackParamList, TabParamList } from './src/types/navigation';
 
@@ -108,10 +115,18 @@ function AppContent() {
         <Stack.Screen name="AddEditObject" component={AddEditObjectScreen} />
         <Stack.Screen name="FireSafety" component={FireSafetyScreen} />
         
+        
+        <Stack.Screen name="ExtinguishersList" component={ExtinguishersListScreen} />
+        <Stack.Screen name="AddEditExtinguisher" component={AddEditExtinguisherScreen} />
+        <Stack.Screen name="EquipmentList" component={EquipmentListScreen} />
+        <Stack.Screen name="AddEditEquipment" component={AddEditEquipmentScreen} />
+        <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
+
         {/* Экран авторизации */}
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="PinCode" component={PinCodeScreen} />
+        
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -120,7 +135,9 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <NotificationProvider>
+        <AppContent />
+      </NotificationProvider>
     </AuthProvider>
   );
 }

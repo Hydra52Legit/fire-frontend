@@ -12,11 +12,17 @@ import {
   StatusBar,
   Platform,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+
+import { RootStackParamList } from '../types/navigation';
+import { InspectionObject, FireSafetyStats } from '../types';
 import DataService from '../services/dataService';
-import { InspectionObject } from '../types';
+import FireSafetyService from '../services/fireSafetyService';
+import { useAuth } from '../contexts/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 const isSmallScreen = height < 700;
@@ -30,7 +36,12 @@ const STERLITAMAK_REGION: Region = {
   longitudeDelta: 0.0922 * ASPECT_RATIO,
 };
 
+type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
+
 export default function HomeScreen() {
+  const navigation = useNavigation<HomeScreenNavigationProp>();
+  const { user } = useAuth();
+  
   const [searchVisible, setSearchVisible] = useState(false);
   const [modulesModalVisible, setModulesModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,9 +51,17 @@ export default function HomeScreen() {
   const [mapRegion, setMapRegion] = useState<Region>(STERLITAMAK_REGION);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState<FireSafetyStats>({
+    totalExtinguishers: 0,
+    expiredExtinguishers: 0,
+    totalEquipment: 0,
+    expiredEquipment: 0,
+    upcomingInspections: 0,
+  });
 
   useEffect(() => {
     loadObjects();
+    loadStats();
     requestLocationPermission();
   }, []);
 
@@ -61,6 +80,15 @@ export default function HomeScreen() {
       console.error('Error loading objects:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadStats = async () => {
+    try {
+      const statsData = await FireSafetyService.getFireSafetyStats();
+      setStats(statsData);
+    } catch (error) {
+      console.error('Error loading stats:', error);
     }
   };
 
@@ -111,10 +139,9 @@ export default function HomeScreen() {
       [
         { text: 'Закрыть', style: 'cancel' },
         { 
-          text: 'Подробнее', 
+          text: 'Пожарная безопасность', 
           onPress: () => {
-            // Навигация к деталям объекта
-            // navigation.navigate('ObjectDetails', { objectId: object.id });
+            navigation.navigate('FireSafety', { objectId: object.id });
           }
         }
       ]
@@ -171,44 +198,84 @@ export default function HomeScreen() {
 
   const MODULES = [
     {
-      id: 1,
+      id: 'objects',
       title: 'Реестр объектов',
-      icon: 'business',
       description: 'Учет всех проверяемых объектов',
-      route: 'Objects',
+      icon: 'business',
+      screen: 'ObjectsList',
+      adminOnly: false,
+      color: '#45B7D1'
     },
     {
-      id: 2,
-      title: 'Учет огнетушителей',
-      icon: 'flame',
+      id: 'extinguishers',
+      title: 'Огнетушители',
       description: 'Инвентаризация средств пожаротушения',
-      onPress: () => Alert.alert('В разработке', 'Модуль учета огнетушителей'),
+      icon: 'flame',
+      screen: 'ExtinguishersList',
+      adminOnly: false,
+      color: '#FF6B6B'
     },
     {
-      id: 3,
-      title: 'Модуль проверок',
+      id: 'equipment',
+      title: 'Пожарное оборудование',
+      description: 'Учет пожарного оборудования',
+      icon: 'hardware-chip',
+      screen: 'EquipmentList',
+      adminOnly: false,
+      color: '#4ECDC4'
+    },
+    {
+      id: 'safety',
+      title: 'Пожарная безопасность',
+      description: 'Общая статистика и мониторинг',
+      icon: 'shield-checkmark',
+      screen: 'FireSafety',
+      adminOnly: false,
+      color: '#FFD166'
+    },
+    {
+      id: 'reports',
+      title: 'Отчеты',
+      description: 'Аналитика и отчетность',
       icon: 'document-text',
-      description: 'Плановые и внеплановые проверки',
-      onPress: () => Alert.alert('В разработке', 'Модуль проверок'),
+      screen: 'Reports',
+      adminOnly: true,
+      color: '#9B5DE5'
     },
     {
-      id: 4,
+      id: 'notifications',
+      title: 'Уведомления',
+      description: 'Настройка оповещений',
+      icon: 'notifications',
+      screen: 'NotificationSettings',
+      adminOnly: false,
+      color: '#00BBF9'
+    },
+    {
+      id: 'add_object',
       title: 'Добавление объектов',
-      icon: 'add-circle',
       description: 'Доступно администраторам',
+      icon: 'add-circle',
+      screen: 'AddEditObject',
       adminOnly: true,
-      route: 'AddEditObject',
+      color: '#06D6A0'
     },
   ];
 
   const handleModulePress = (module: any) => {
-    if (module.onPress) {
-      module.onPress();
-    } else if (module.route) {
-      // navigation.navigate(module.route);
-      setModulesModalVisible(false);
-    }
     setModulesModalVisible(false);
+    
+    if (module.screen === 'FireSafety') {
+      // Для FireSafety можно передать первый объект или сделать выбор
+      const firstObject = objects[0];
+      if (firstObject) {
+        navigation.navigate('FireSafety', { objectId: firstObject.id });
+      } else {
+        Alert.alert('Информация', 'Нет объектов для отображения');
+      }
+    } else if (module.screen) {
+      navigation.navigate(module.screen as any);
+    }
   };
 
   const centerOnUser = async () => {
@@ -223,6 +290,51 @@ export default function HomeScreen() {
       await requestLocationPermission();
     }
   };
+
+  // Быстрая статистика для главного экрана
+  const QuickStats = () => (
+    <View style={styles.quickStats}>
+      <Text style={styles.quickStatsTitle}>Быстрая статистика</Text>
+      <View style={styles.statsGrid}>
+        <TouchableOpacity 
+          style={styles.statItem}
+          onPress={() => navigation.navigate('ExtinguishersList')}
+        >
+          <Ionicons name="flame" size={24} color="#FF6B6B" />
+          <Text style={styles.statNumber}>{stats.totalExtinguishers}</Text>
+          <Text style={styles.statLabel}>Огнетушители</Text>
+          {stats.expiredExtinguishers > 0 && (
+            <View style={styles.warningBadge}>
+              <Text style={styles.warningText}>{stats.expiredExtinguishers}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.statItem}
+          onPress={() => navigation.navigate('EquipmentList')}
+        >
+          <Ionicons name="hardware-chip" size={24} color="#4ECDC4" />
+          <Text style={styles.statNumber}>{stats.totalEquipment}</Text>
+          <Text style={styles.statLabel}>Оборудование</Text>
+          {stats.expiredEquipment > 0 && (
+            <View style={styles.warningBadge}>
+              <Text style={styles.warningText}>{stats.expiredEquipment}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.statItem}
+          onPress={() => navigation.navigate('ObjectsList')}
+        >
+          <Ionicons name="business" size={24} color="#45B7D1" />
+          <Text style={styles.statNumber}>{objects.length}</Text>
+          <Text style={styles.statLabel}>Объекты</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -275,6 +387,9 @@ export default function HomeScreen() {
             <Ionicons name="apps" size={22} color="#007AFF" />
           </TouchableOpacity>
         </View>
+
+        {/* Быстрая статистика */}
+        <QuickStats />
 
         {/* Кнопка центрирования на пользователе */}
         <TouchableOpacity 
@@ -380,28 +495,35 @@ export default function HomeScreen() {
               style={styles.modulesList}
               showsVerticalScrollIndicator={false}
             >
-              {MODULES.map((module) => (
-                <TouchableOpacity
-                  key={module.id}
-                  style={styles.moduleItem}
-                  onPress={() => handleModulePress(module)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.moduleIcon}>
-                    <Ionicons name={module.icon as any} size={24} color="#007AFF" />
-                  </View>
-                  <View style={styles.moduleInfo}>
-                    <Text style={styles.moduleTitle}>{module.title}</Text>
-                    <Text style={styles.moduleDescription}>{module.description}</Text>
-                    {module.adminOnly && (
-                      <View style={styles.adminBadge}>
-                        <Text style={styles.adminBadgeText}>Только для администраторов</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color="#666" />
-                </TouchableOpacity>
-              ))}
+              {MODULES.map((module) => {
+                // Показываем только доступные модули для роли пользователя
+                if (module.adminOnly && user?.role !== 'admin') {
+                  return null;
+                }
+                
+                return (
+                  <TouchableOpacity
+                    key={module.id}
+                    style={styles.moduleItem}
+                    onPress={() => handleModulePress(module)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.moduleIcon, { backgroundColor: module.color + '20' }]}>
+                      <Ionicons name={module.icon as any} size={24} color={module.color} />
+                    </View>
+                    <View style={styles.moduleInfo}>
+                      <Text style={styles.moduleTitle}>{module.title}</Text>
+                      <Text style={styles.moduleDescription}>{module.description}</Text>
+                      {module.adminOnly && (
+                        <View style={styles.adminBadge}>
+                          <Text style={styles.adminBadgeText}>Только для администраторов</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#666" />
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           </View>
         </View>
@@ -503,6 +625,64 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
+  },
+  quickStats: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  quickStatsTitle: {
+    fontSize: isSmallScreen ? 16 : 18,
+    fontWeight: 'bold',
+    color: '#000',
+    marginBottom: 12,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 12,
+    borderRadius: 12,
+    marginHorizontal: 4,
+    position: 'relative',
+  },
+  statNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#000000',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+  },
+  warningBadge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#FF3B30',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  warningText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   modalOverlay: {
     flex: 1,
@@ -623,7 +803,6 @@ const styles = StyleSheet.create({
     width: isSmallScreen ? 44 : 48,
     height: isSmallScreen ? 44 : 48,
     borderRadius: isSmallScreen ? 22 : 24,
-    backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,

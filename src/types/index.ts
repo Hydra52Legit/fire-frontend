@@ -89,3 +89,71 @@ export interface AuthState {
   isAuthenticated: boolean;
   needsPin: boolean;
 }
+
+
+// Добавим после существующих типов:
+
+export type ExtinguisherType = 
+  | 'powder'        // Порошковый
+  | 'co2'           // Углекислотный
+  | 'water'         // Водный
+  | 'foam'          // Пенный
+  | 'air_emulsion'; // Воздушно-эмульсионный
+
+export type FireEquipmentType =
+  | 'fire_hydrant'     // Пожарный кран
+  | 'fire_hose'        // Пожарный гидрант
+  | 'fire_shield'      // Пожарный щит
+  | 'fire_alarm'       // Пожарная сигнализация
+  | 'sprinkler';       // Спринклерная система
+
+export type EquipmentStatus = 
+  | 'active'          // Активен
+  | 'maintenance'     // На обслуживании
+  | 'expired'         // Просрочен
+  | 'decommissioned'; // Списано
+
+export interface FireExtinguisher {
+  id: string;
+  inventoryNumber: string;     // Инвентарный номер
+  type: ExtinguisherType;      // Тип огнетушителя
+  capacity: number;            // Вместимость (кг или л)
+  location: string;            // Место установки
+  objectId: string;            // ID объекта
+  lastServiceDate: string;     // Дата последней заправки/проверки
+  nextServiceDate: string;     // Дата следующей проверки
+  status: EquipmentStatus;     // Статус
+  manufacturer?: string;       // Производитель
+  manufactureDate?: string;    // Дата изготовления
+  comments?: string;           // Комментарии
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FireEquipment {
+  id: string;
+  type: FireEquipmentType;     // Тип оборудования
+  inventoryNumber?: string;    // Инвентарный номер (если есть)
+  location: string;            // Место установки
+  objectId: string;            // ID объекта
+  lastInspectionDate: string;  // Дата последней проверки
+  nextInspectionDate: string;  // Дата следующей проверки
+  status: EquipmentStatus;     // Статус
+  specifications?: {           // Характеристики
+    pressure?: number;         // Давление (для гидрантов)
+    diameter?: number;         // Диаметр (мм)
+    length?: number;           // Длина (м)
+    material?: string;         // Материал
+  };
+  comments?: string;           // Комментарии
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FireSafetyStats {
+  totalExtinguishers: number;
+  expiredExtinguishers: number;
+  totalEquipment: number;
+  expiredEquipment: number;
+  upcomingInspections: number;
+}
