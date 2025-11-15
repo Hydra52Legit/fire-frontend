@@ -9,7 +9,8 @@ import {
   ActivityIndicator,
   TextInput,
 } from 'react-native';
-import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -22,18 +23,11 @@ type EquipmentListScreenNavigationProp = NativeStackNavigationProp<RootStackPara
 
 export default function EquipmentListScreen() {
   const navigation = useNavigation<EquipmentListScreenNavigationProp>();
-  const isFocused = useIsFocused();
   const { user } = useAuth();
 
   const [equipment, setEquipment] = useState<FireEquipment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-
-  useEffect(() => {
-    if (isFocused) {
-      loadEquipment();
-    }
-  }, [isFocused]);
 
   const loadEquipment = async () => {
     try {
@@ -46,6 +40,12 @@ export default function EquipmentListScreen() {
       setIsLoading(false);
     }
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadEquipment();
+    }, [])
+  );
 
   const handleAddEquipment = () => {
     navigation.navigate('AddEditEquipment', { equipmentId: undefined });

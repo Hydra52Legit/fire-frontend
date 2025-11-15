@@ -12,7 +12,8 @@ import {
   StatusBar,
   Platform,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
@@ -59,16 +60,6 @@ export default function HomeScreen() {
     upcomingInspections: 0,
   });
 
-  useEffect(() => {
-    loadObjects();
-    loadStats();
-    requestLocationPermission();
-  }, []);
-
-  useEffect(() => {
-    filterObjects();
-  }, [searchQuery, objects]);
-
   const loadObjects = async () => {
     try {
       setIsLoading(true);
@@ -91,6 +82,21 @@ export default function HomeScreen() {
       console.error('Error loading stats:', error);
     }
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadObjects();
+      loadStats();
+    }, [])
+  );
+
+  useEffect(() => {
+    requestLocationPermission();
+  }, []);
+
+  useEffect(() => {
+    filterObjects();
+  }, [searchQuery, objects]);
 
   const requestLocationPermission = async () => {
     try {
@@ -534,9 +540,9 @@ export default function HomeScreen() {
               {MODULES.filter((module) => {
                 // Фильтруем модули по правам доступа
                 return !(module.adminOnly && user?.role !== 'admin');
-              }).map((module) => (
+              }).map((module, index) => (
                 <TouchableOpacity
-                  key={module.id}
+                  key={module.id + index}
                   style={styles.moduleItem}
                   onPress={() => handleModulePress(module)}
                   activeOpacity={0.7}

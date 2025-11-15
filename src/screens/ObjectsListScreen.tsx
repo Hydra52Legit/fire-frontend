@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   TextInput,
 } from 'react-native';
-import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -22,23 +22,12 @@ type ObjectsListScreenNavigationProp = NativeStackNavigationProp<RootStackParamL
 
 export default function ObjectsListScreen() {
   const navigation = useNavigation<ObjectsListScreenNavigationProp>();
-  const isFocused = useIsFocused();
   const { user } = useAuth();
 
   const [objects, setObjects] = useState<InspectionObject[]>([]);
   const [filteredObjects, setFilteredObjects] = useState<InspectionObject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-
-  useEffect(() => {
-    if (isFocused) {
-      loadObjects();
-    }
-  }, [isFocused]);
-
-  useEffect(() => {
-    filterObjects();
-  }, [searchQuery, objects]);
 
   const loadObjects = async () => {
     try {
@@ -51,6 +40,16 @@ export default function ObjectsListScreen() {
       setIsLoading(false);
     }
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadObjects();
+    }, [])
+  );
+
+  useEffect(() => {
+    filterObjects();
+  }, [searchQuery, objects]);
 
   const filterObjects = () => {
     if (!searchQuery.trim()) {

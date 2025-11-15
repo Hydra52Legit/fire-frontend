@@ -9,7 +9,7 @@ import { Platform } from 'react-native';
 
 const getBaseUrl = () => {
   if (__DEV__) {
-    return 'http://100.71.159.26:3001/api'; // Ваш локальный IP адрес
+    return 'http://100.71.147.94:8080/api'; // Ваш локальный IP адрес
   } else {
     return 'https://your-production-api.com/api';
   }

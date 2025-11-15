@@ -51,8 +51,11 @@ export default function CreateInspectionScreen() {
   };
 
   const addViolation = () => {
+    // Используем временный ID для локального состояния (только для React key)
+    // Реальный ID будет сгенерирован при сохранении в reportService
+    const tempId = `temp_${Date.now()}_${Math.random()}`;
     const newViolation: Violation = {
-      id: Date.now().toString(),
+      id: tempId,
       type: 'fire_safety',
       description: '',
       objectId,

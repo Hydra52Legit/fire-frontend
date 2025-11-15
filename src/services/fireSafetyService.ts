@@ -41,23 +41,41 @@ function transformExtinguisherFromBackend(obj: any): FireExtinguisher {
 function transformExtinguisherToBackend(obj: Partial<FireExtinguisher>): any {
   const result: any = {};
 
-  if (obj.objectId !== undefined) result.objectId = obj.objectId;
-  if (obj.inventoryNumber !== undefined) result.inventoryNumber = obj.inventoryNumber;
-  if (obj.type !== undefined) result.type = obj.type;
-  if (obj.capacity !== undefined) result.capacity = obj.capacity;
-  if (obj.location !== undefined) result.location = obj.location;
-  if (obj.lastServiceDate !== undefined) {
+  // Обязательные поля - передаем если они определены (не undefined и не null)
+  // Пустые строки тоже передаем, валидация на бэкенде проверит их
+  if (obj.objectId !== undefined && obj.objectId !== null) {
+    result.objectId = obj.objectId;
+  }
+  if (obj.inventoryNumber !== undefined && obj.inventoryNumber !== null) {
+    result.inventoryNumber = obj.inventoryNumber;
+  }
+  if (obj.type !== undefined && obj.type !== null) {
+    result.type = obj.type;
+  }
+  if (obj.capacity !== undefined && obj.capacity !== null) {
+    result.capacity = obj.capacity;
+  }
+  if (obj.location !== undefined && obj.location !== null) {
+    result.location = obj.location;
+  }
+  if (obj.lastServiceDate !== undefined && obj.lastServiceDate !== null && obj.lastServiceDate !== '') {
     result.lastServiceDate = new Date(obj.lastServiceDate);
   }
-  if (obj.nextServiceDate !== undefined) {
+  if (obj.nextServiceDate !== undefined && obj.nextServiceDate !== null && obj.nextServiceDate !== '') {
     result.nextServiceDate = new Date(obj.nextServiceDate);
   }
+  
+  // Опциональные поля - передаем только если они определены и не пустые
   if (obj.status !== undefined) result.status = obj.status;
-  if (obj.manufacturer !== undefined) result.manufacturer = obj.manufacturer;
-  if (obj.manufactureDate !== undefined) {
+  if (obj.manufacturer !== undefined && obj.manufacturer !== null && obj.manufacturer !== '') {
+    result.manufacturer = obj.manufacturer;
+  }
+  if (obj.manufactureDate !== undefined && obj.manufactureDate !== null && obj.manufactureDate !== '') {
     result.manufactureDate = new Date(obj.manufactureDate);
   }
-  if (obj.comments !== undefined) result.comments = obj.comments;
+  if (obj.comments !== undefined && obj.comments !== null && obj.comments !== '') {
+    result.comments = obj.comments;
+  }
 
   return result;
 }
@@ -171,10 +189,12 @@ class FireSafetyService {
   async createExtinguisher(extinguisher: Partial<FireExtinguisher>): Promise<FireExtinguisher> {
     try {
       const data = transformExtinguisherToBackend(extinguisher);
+      console.log('Creating extinguisher with data:', data);
       const created = await apiClient.post<any>(API_CONFIG.ENDPOINTS.EXTINGUISHERS.CREATE, data);
       return transformExtinguisherFromBackend(created);
     } catch (error) {
       console.error('Error creating fire extinguisher:', error);
+      console.error('Extinguisher data:', extinguisher);
       throw error;
     }
   }
@@ -192,7 +212,7 @@ class FireSafetyService {
   }
 
   // Сохранение огнетушителя (создание или обновление)
-  async saveFireExtinguisher(extinguisher: FireExtinguisher): Promise<FireExtinguisher> {
+  async saveFireExtinguisher(extinguisher: Partial<FireExtinguisher> & { id?: string }): Promise<FireExtinguisher> {
     try {
       if (extinguisher.id) {
         return await this.updateExtinguisher(extinguisher.id, extinguisher);
@@ -290,7 +310,7 @@ class FireSafetyService {
   }
 
   // Сохранение оборудования (создание или обновление)
-  async saveFireEquipment(equipment: FireEquipment): Promise<FireEquipment> {
+  async saveFireEquipment(equipment: Partial<FireEquipment> & { id?: string }): Promise<FireEquipment> {
     try {
       if (equipment.id) {
         return await this.updateEquipment(equipment.id, equipment);

@@ -9,7 +9,8 @@ import {
   ActivityIndicator,
   TextInput,
 } from 'react-native';
-import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -23,7 +24,6 @@ type ExtinguishersListScreenNavigationProp = NativeStackNavigationProp<RootStack
 
 export default function ExtinguishersListScreen() {
   const navigation = useNavigation<ExtinguishersListScreenNavigationProp>();
-  const isFocused = useIsFocused();
   const { user } = useAuth();
 
   const [extinguishers, setExtinguishers] = useState<FireExtinguisher[]>([]);
@@ -32,17 +32,6 @@ export default function ExtinguishersListScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [objects, setObjects] = useState<any[]>([]);
-
-  useEffect(() => {
-    if (isFocused) {
-      loadExtinguishers();
-      loadObjects();
-    }
-  }, [isFocused]);
-
-  useEffect(() => {
-    filterExtinguishers();
-  }, [searchQuery, statusFilter, extinguishers]);
 
   const loadExtinguishers = async () => {
     try {
@@ -64,6 +53,17 @@ export default function ExtinguishersListScreen() {
       console.error('Error loading objects:', error);
     }
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadExtinguishers();
+      loadObjects();
+    }, [])
+  );
+
+  useEffect(() => {
+    filterExtinguishers();
+  }, [searchQuery, statusFilter, extinguishers]);
 
   const filterExtinguishers = () => {
     let filtered = extinguishers;

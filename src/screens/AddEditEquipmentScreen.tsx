@@ -123,8 +123,8 @@ export default function AddEditEquipmentScreen() {
       setIsLoading(true);
 
       // ИСПРАВЛЕНО: Преобразуем строки обратно в числа для сохранения
-      const equipmentData: FireEquipment = {
-        id: equipmentId || Date.now().toString(),
+      const equipmentData: Partial<FireEquipment> & { id?: string } = {
+        ...(equipmentId && { id: equipmentId }),
         type,
         inventoryNumber: inventoryNumber.trim() || undefined,
         location: location.trim(),

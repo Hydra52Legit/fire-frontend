@@ -6,6 +6,17 @@ import FireSafetyService from './fireSafetyService';
 import ObjectService from './objectService';
 import { FireExtinguisher, FireEquipment, InspectionObject } from '../types';
 
+// Проверка, запущено ли приложение в Expo Go
+// Используем try-catch, так как expo-constants может быть не установлен
+let isExpoGo = false;
+try {
+  const Constants = require('expo-constants');
+  isExpoGo = Constants?.executionEnvironment === 'storeClient' || Constants?.executionEnvironment === 'standalone';
+} catch (e) {
+  // Если expo-constants недоступен, предполагаем, что это не Expo Go
+  isExpoGo = false;
+}
+
 // Типы уведомлений
 export type NotificationType = 
   | 'extinguisher_expiry'      // Истечение срока огнетушителя
@@ -46,6 +57,12 @@ class NotificationService {
   // Инициализация сервиса уведомлений
   async initialize(): Promise<boolean> {
     try {
+      // Отключаем push-уведомления в Expo Go (они не поддерживаются)
+      if (isExpoGo) {
+        console.log('Push-уведомления отключены в Expo Go. Используйте development build для полной функциональности.');
+        return false;
+      }
+
       if (!Device.isDevice) {
         console.log('Уведомления работают только на реальных устройствах');
         return false;
@@ -81,7 +98,12 @@ class NotificationService {
       this.isInitialized = true;
       console.log('Сервис уведомлений инициализирован');
       return true;
-    } catch (error) {
+    } catch (error: any) {
+      // Проверяем, не связана ли ошибка с Expo Go
+      if (error?.message?.includes('Expo Go') || error?.message?.includes('development build')) {
+        console.log('Push-уведомления недоступны в Expo Go. Используйте development build.');
+        return false;
+      }
       console.error('Ошибка инициализации уведомлений:', error);
       return false;
     }
@@ -264,8 +286,17 @@ class NotificationService {
 
   // Планирование всех уведомлений
   async scheduleAllNotifications(): Promise<void> {
+    // Не планируем уведомления в Expo Go
+    if (isExpoGo) {
+      console.log('Планирование уведомлений пропущено (Expo Go)');
+      return;
+    }
+
     if (!this.isInitialized) {
-      await this.initialize();
+      const initialized = await this.initialize();
+      if (!initialized) {
+        return;
+      }
     }
 
     try {
@@ -298,47 +329,98 @@ class NotificationService {
 
   // Отмена уведомлений для огнетушителя
   async cancelExtinguisherNotifications(extinguisherId: string): Promise<void> {
-    const preferences = await this.getPreferences();
-    for (const daysBefore of preferences.daysBefore) {
-      await Notifications.cancelScheduledNotificationAsync(`extinguisher_${extinguisherId}_${daysBefore}`);
+    if (isExpoGo) return;
+    try {
+      const preferences = await this.getPreferences();
+      for (const daysBefore of preferences.daysBefore) {
+        await Notifications.cancelScheduledNotificationAsync(`extinguisher_${extinguisherId}_${daysBefore}`);
+      }
+    } catch (error: any) {
+      if (error?.message?.includes('Expo Go') || error?.message?.includes('development build')) {
+        return;
+      }
+      console.error('Ошибка отмены уведомлений для огнетушителя:', error);
     }
   }
 
   // Отмена уведомлений для оборудования
   async cancelEquipmentNotifications(equipmentId: string): Promise<void> {
-    const preferences = await this.getPreferences();
-    for (const daysBefore of preferences.daysBefore) {
-      await Notifications.cancelScheduledNotificationAsync(`equipment_${equipmentId}_${daysBefore}`);
+    if (isExpoGo) return;
+    try {
+      const preferences = await this.getPreferences();
+      for (const daysBefore of preferences.daysBefore) {
+        await Notifications.cancelScheduledNotificationAsync(`equipment_${equipmentId}_${daysBefore}`);
+      }
+    } catch (error: any) {
+      if (error?.message?.includes('Expo Go') || error?.message?.includes('development build')) {
+        return;
+      }
+      console.error('Ошибка отмены уведомлений для оборудования:', error);
     }
   }
 
   // Отмена уведомлений для объекта
   async cancelObjectNotifications(objectId: string): Promise<void> {
-    await Notifications.cancelScheduledNotificationAsync(`object_${objectId}_inspection`);
+    if (isExpoGo) return;
+    try {
+      await Notifications.cancelScheduledNotificationAsync(`object_${objectId}_inspection`);
+    } catch (error: any) {
+      if (error?.message?.includes('Expo Go') || error?.message?.includes('development build')) {
+        return;
+      }
+      console.error('Ошибка отмены уведомлений для объекта:', error);
+    }
   }
 
   // Отмена всех уведомлений
   async cancelAllNotifications(): Promise<void> {
-    await Notifications.cancelAllScheduledNotificationsAsync();
-    console.log('Все уведомления отменены');
+    if (isExpoGo) {
+      console.log('Отмена уведомлений пропущена (Expo Go)');
+      return;
+    }
+    try {
+      await Notifications.cancelAllScheduledNotificationsAsync();
+      console.log('Все уведомления отменены');
+    } catch (error: any) {
+      if (error?.message?.includes('Expo Go') || error?.message?.includes('development build')) {
+        return;
+      }
+      console.error('Ошибка отмены всех уведомлений:', error);
+    }
   }
 
   // Получение запланированных уведомлений
   async getScheduledNotifications(): Promise<ScheduledNotification[]> {
-    const notifications = await Notifications.getAllScheduledNotificationsAsync();
-    // ИСПРАВЛЕНО: Добавлен тип для параметра
-    return notifications.map((notif: any) => ({
-      id: notif.identifier,
-      type: notif.content.data?.type as NotificationType || 'immediate_alert',
-      title: notif.content.title || '',
-      body: notif.content.body || '',
-      date: new Date((notif.trigger as any).value * 1000),
-      data: notif.content.data,
-    }));
+    if (isExpoGo) {
+      return [];
+    }
+    try {
+      const notifications = await Notifications.getAllScheduledNotificationsAsync();
+      // ИСПРАВЛЕНО: Добавлен тип для параметра
+      return notifications.map((notif: any) => ({
+        id: notif.identifier,
+        type: notif.content.data?.type as NotificationType || 'immediate_alert',
+        title: notif.content.title || '',
+        body: notif.content.body || '',
+        date: new Date((notif.trigger as any).value * 1000),
+        data: notif.content.data,
+      }));
+    } catch (error: any) {
+      if (error?.message?.includes('Expo Go') || error?.message?.includes('development build')) {
+        return [];
+      }
+      console.error('Ошибка получения запланированных уведомлений:', error);
+      return [];
+    }
   }
 
   // Вспомогательные методы
   private async scheduleNotification(notification: ScheduledNotification): Promise<void> {
+    // Не планируем уведомления в Expo Go
+    if (isExpoGo) {
+      return;
+    }
+
     try {
       // ИСПРАВЛЕНО: Правильный формат триггера
       await Notifications.scheduleNotificationAsync({
@@ -358,12 +440,21 @@ class NotificationService {
           date: notification.date.getTime(),
         } as Notifications.DateTriggerInput,
       });
-    } catch (error) {
+    } catch (error: any) {
+      // Игнорируем ошибки, связанные с Expo Go
+      if (error?.message?.includes('Expo Go') || error?.message?.includes('development build')) {
+        return;
+      }
       console.error('Ошибка планирования уведомления:', error);
     }
   }
 
   private async scheduleImmediateNotification(title: string, body: string, data?: any): Promise<void> {
+    // Не планируем уведомления в Expo Go
+    if (isExpoGo) {
+      return;
+    }
+
     try {
       await Notifications.scheduleNotificationAsync({
         content: {
@@ -378,7 +469,11 @@ class NotificationService {
         },
         trigger: null, // Немедленное уведомление
       });
-    } catch (error) {
+    } catch (error: any) {
+      // Игнорируем ошибки, связанные с Expo Go
+      if (error?.message?.includes('Expo Go') || error?.message?.includes('development build')) {
+        return;
+      }
       console.error('Ошибка отправки немедленного уведомления:', error);
     }
   }

@@ -118,8 +118,8 @@ export default function AddEditObjectScreen() {
     try {
       setIsSaving(true);
 
-      const objectData: InspectionObject = {
-        id: objectId || Date.now().toString(),
+      const objectData: Omit<InspectionObject, "id"> & { id?: string } = {
+        ...(objectId && { id: objectId }),
         name: formData.name.trim(),
         legalAddress: formData.legalAddress.trim(),
         actualAddress: formData.actualAddress.trim(),

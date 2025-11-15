@@ -28,10 +28,15 @@ export default function AddEditObjectScreen() {
   const navigation = useNavigation<AddEditObjectScreenNavigationProp>();
   const route = useRoute();
   const { user } = useAuth();
-  const { objectId, coordinates: initialCoordinates } = route.params as { 
+  
+  // Безопасная деструктуризация route.params
+  const routeParams = route.params as { 
     objectId?: string;
     coordinates?: { latitude: number; longitude: number };
-  };
+  } | undefined;
+  
+  const objectId = routeParams?.objectId;
+  const initialCoordinates = routeParams?.coordinates;
 
   const [isLoading, setIsLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -42,12 +47,13 @@ export default function AddEditObjectScreen() {
   const [actualAddress, setActualAddress] = useState('');
   const [type, setType] = useState<ObjectType>('administrative');
   const [fireSafetyClass, setFireSafetyClass] = useState<FireSafetyClass>('F1.1');
-  const [coordinates, setCoordinates] = useState({
-    latitude: initialCoordinates?.latitude || 53.630,
-    longitude: initialCoordinates?.longitude || 55.950,
+  const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number }>({
+    latitude: initialCoordinates?.latitude ?? 53.630,
+    longitude: initialCoordinates?.longitude ?? 55.950,
   });
 
   // Ответственное лицо
+  const [responsibleId, setResponsibleId] = useState('');
   const [responsibleName, setResponsibleName] = useState('');
   const [responsiblePosition, setResponsiblePosition] = useState('');
   const [workPhone, setWorkPhone] = useState('');
@@ -89,7 +95,7 @@ export default function AddEditObjectScreen() {
   // Обновляем координаты если они были переданы из MapPicker
   useFocusEffect(
     React.useCallback(() => {
-      const params = route.params as any;
+      const params = route.params as { coordinates?: { latitude: number; longitude: number } } | undefined;
       if (params?.coordinates) {
         setCoordinates(params.coordinates);
       }
@@ -114,6 +120,7 @@ export default function AddEditObjectScreen() {
         // Загружаем текущего ответственного
         const currentResponsible = object.responsiblePersons.find(rp => rp.isCurrent);
         if (currentResponsible) {
+          setResponsibleId(currentResponsible.id);
           setResponsibleName(currentResponsible.fullName);
           setResponsiblePosition(currentResponsible.position);
           setWorkPhone(currentResponsible.workPhone || '');
@@ -163,12 +170,13 @@ export default function AddEditObjectScreen() {
         name: name.trim(),
         legalAddress: legalAddress.trim(),
         actualAddress: actualAddress.trim(),
-        coordinates,
+        createdBy: user?.id || '',
+        coordinates: coordinates || { latitude: 53.630, longitude: 55.950 },
         type,
         fireSafetyClass,
         responsiblePersons: [
           {
-            id: Date.now().toString(),
+            id: responsibleId.trim(),
             fullName: responsibleName.trim(),
             position: responsiblePosition.trim(),
             workPhone: workPhone.trim() || undefined,
@@ -206,12 +214,9 @@ export default function AddEditObjectScreen() {
   };
 
   const handleSelectOnMap = () => {
-    navigation.navigate('MapPicker', {
-      initialCoordinates: coordinates,
-      onSelect: (selectedCoords: { latitude: number; longitude: number }) => {
-        setCoordinates(selectedCoords);
-      },
-    });
+    // TODO: Реализовать навигацию на экран выбора координат на карте
+    // Временная заглушка для отображения фронта - функция будет реализована позже
+    Alert.alert('Выбор на карте', 'Функция выбора координат на карте будет реализована позже');
   };
 
   if (isLoading && isEditing) {

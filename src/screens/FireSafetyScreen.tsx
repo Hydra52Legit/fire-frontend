@@ -8,7 +8,8 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -32,10 +33,6 @@ export default function FireSafetyScreen() {
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadStats();
-  }, []);
-
   const loadStats = async () => {
     try {
       setIsLoading(true);
@@ -47,6 +44,12 @@ export default function FireSafetyScreen() {
       setIsLoading(false);
     }
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadStats();
+    }, [])
+  );
 
   // ИСПРАВЛЕНО: Правильное использование навигации с TypeScript
   const handleAddExtinguisher = () => {

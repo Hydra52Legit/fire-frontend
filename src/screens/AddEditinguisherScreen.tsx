@@ -126,8 +126,8 @@ export default function AddEditExtinguisherScreen() {
     try {
       setIsLoading(true);
 
-      const extinguisherData: FireExtinguisher = {
-        id: extinguisherId || Date.now().toString(),
+      const extinguisherData: Partial<FireExtinguisher> & { id?: string } = {
+        ...(extinguisherId && { id: extinguisherId }),
         inventoryNumber: inventoryNumber.trim(),
         type,
         capacity: parseFloat(capacity),
@@ -137,10 +137,9 @@ export default function AddEditExtinguisherScreen() {
         nextServiceDate: nextServiceDate.toISOString().split('T')[0],
         status,
         manufacturer: manufacturer.trim() || undefined,
-        manufactureDate: manufactureDate.toISOString().split('T')[0],
+        manufactureDate: manufactureDate.toISOString().split('T')[0] || undefined,
         comments: comments.trim() || undefined,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        // createdAt и updatedAt не нужны при создании - бэкенд установит их автоматически
       };
 
       await FireSafetyService.saveFireExtinguisher(extinguisherData);

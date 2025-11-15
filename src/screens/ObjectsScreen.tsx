@@ -11,7 +11,8 @@ import {
   ActivityIndicator,
   Modal,
 } from 'react-native';
-import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 
 import { InspectionObject } from '../types';
@@ -21,7 +22,6 @@ import { canEdit, canDelete, canCreate } from '../utils/permissions';
 
 export default function ObjectsScreen() {
   const navigation = useNavigation<any>();
-  const isFocused = useIsFocused();
   const { user } = useAuth();
 
   const [objects, setObjects] = useState<InspectionObject[]>([]);
@@ -30,16 +30,6 @@ export default function ObjectsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedObject, setSelectedObject] = useState<InspectionObject | null>(null);
   const [actionModalVisible, setActionModalVisible] = useState(false);
-
-  useEffect(() => {
-    if (isFocused) {
-      loadObjects();
-    }
-  }, [isFocused]);
-
-  useEffect(() => {
-    filterObjects();
-  }, [searchQuery, objects]);
 
   const loadObjects = async () => {
     try {
@@ -53,6 +43,16 @@ export default function ObjectsScreen() {
       setIsLoading(false);
     }
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadObjects();
+    }, [])
+  );
+
+  useEffect(() => {
+    filterObjects();
+  }, [searchQuery, objects]);
 
   const filterObjects = () => {
     if (!searchQuery.trim()) {
