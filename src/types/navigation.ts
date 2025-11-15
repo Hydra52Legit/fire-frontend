@@ -13,8 +13,12 @@ export type RootStackParamList = {
   
   // Объекты
   ObjectsList: undefined;
-  AddEditObject: { objectId?: string };
+  AddEditObject: { objectId?: string; coordinates?: { latitude: number; longitude: number } };
   ObjectDetails: { objectId: string };
+  MapPicker: { 
+    initialCoordinates?: { latitude: number; longitude: number };
+    onSelect?: (coordinates: { latitude: number; longitude: number }) => void;
+  };
   
   // Огнетушители
   ExtinguishersList: undefined;

@@ -20,6 +20,7 @@ import { NotificationProvider } from './src/contexts/NotificationContext';
 import NotificationSettingsScreen from './src/screens/NotificationSettingsScreen';
 import CreateInspectionScreen from './src/screens/CreateInspectionScreen';
 import ReportsScreen from './src/screens/ReportsScreen';
+import MapPickerScreen from './src/screens/MapPickerScreen';
 
 import ExtinguishersListScreen from './src/screens/ExtinguishersListScreen';
 import AddEditExtinguisherScreen from './src/screens/AddEditinguisherScreen';
@@ -115,6 +116,7 @@ function AppContent() {
             <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
             <Stack.Screen name="Reports" component={ReportsScreen} />
             <Stack.Screen name="CreateInspection" component={CreateInspectionScreen} />
+            <Stack.Screen name="MapPicker" component={MapPickerScreen} />
             <Stack.Screen name="PinCode" component={PinCodeScreen} />
           </>
         ) : (

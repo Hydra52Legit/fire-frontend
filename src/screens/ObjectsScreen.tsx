@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { InspectionObject } from '../types';
 import ObjectService from '../services/objectService';
 import { useAuth } from '../contexts/AuthContext';
+import { canEdit, canDelete, canCreate } from '../utils/permissions';
 
 export default function ObjectsScreen() {
   const navigation = useNavigation<any>();
@@ -171,12 +172,14 @@ export default function ObjectsScreen() {
       <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
           <Text style={styles.title}>Объекты проверки</Text>
-          <TouchableOpacity 
-            style={styles.addButton}
-            onPress={handleAddObject}
-          >
-            <Ionicons name="add" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
+          {canCreate(user) && (
+            <TouchableOpacity 
+              style={styles.addButton}
+              onPress={handleAddObject}
+            >
+              <Ionicons name="add" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Поиск */}
@@ -210,13 +213,15 @@ export default function ObjectsScreen() {
                 onLongPress={() => showActionMenu(object)}
                 delayLongPress={500}
               >
-                {/* Кнопка меню - ВИДИМАЯ И КРУПНАЯ */}
-                <TouchableOpacity 
-                  style={styles.contextMenuButton}
-                  onPress={() => showActionMenu(object)}
-                >
-                  <Ionicons name="ellipsis-vertical" size={20} color="#007AFF" />
-                </TouchableOpacity>
+                {/* Кнопка меню - только для пользователей с правами редактирования */}
+                {canEdit(user) && (
+                  <TouchableOpacity 
+                    style={styles.contextMenuButton}
+                    onPress={() => showActionMenu(object)}
+                  >
+                    <Ionicons name="ellipsis-vertical" size={20} color="#007AFF" />
+                  </TouchableOpacity>
+                )}
                 
                 <View style={styles.objectHeader}>
                   <Text style={styles.objectName}>{object.name}</Text>
@@ -268,29 +273,35 @@ export default function ObjectsScreen() {
               {selectedObject?.name}
             </Text>
             
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => handleEditObject(selectedObject!)}
-            >
-              <Ionicons name="create-outline" size={20} color="#007AFF" />
-              <Text style={styles.actionButtonText}>Редактировать</Text>
-            </TouchableOpacity>
+            {canEdit(user) && (
+              <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => handleEditObject(selectedObject!)}
+              >
+                <Ionicons name="create-outline" size={20} color="#007AFF" />
+                <Text style={styles.actionButtonText}>Редактировать</Text>
+              </TouchableOpacity>
+            )}
 
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => handleArchiveObject(selectedObject!)}
-            >
-              <Ionicons name="archive-outline" size={20} color="#FF9500" />
-              <Text style={styles.actionButtonText}>Архивировать</Text>
-            </TouchableOpacity>
+            {canEdit(user) && (
+              <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => handleArchiveObject(selectedObject!)}
+              >
+                <Ionicons name="archive-outline" size={20} color="#FF9500" />
+                <Text style={styles.actionButtonText}>Архивировать</Text>
+              </TouchableOpacity>
+            )}
 
-            <TouchableOpacity 
-              style={[styles.actionButton, styles.deleteButton]}
-              onPress={() => handleDeleteObject(selectedObject!)}
-            >
-              <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-              <Text style={[styles.actionButtonText, styles.deleteButtonText]}>Удалить</Text>
-            </TouchableOpacity>
+            {canDelete(user) && (
+              <TouchableOpacity 
+                style={[styles.actionButton, styles.deleteButton]}
+                onPress={() => handleDeleteObject(selectedObject!)}
+              >
+                <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                <Text style={[styles.actionButtonText, styles.deleteButtonText]}>Удалить</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity 
               style={styles.cancelButton}

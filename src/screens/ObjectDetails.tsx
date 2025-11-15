@@ -19,6 +19,7 @@ import { RootStackParamList } from '../types/navigation';
 import { InspectionObject, Inspection, ResponsiblePerson } from '../types';
 import ObjectService from '../services/objectService';
 import { useAuth } from '../contexts/AuthContext';
+import { canEdit } from '../utils/permissions';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const isSmallScreen = SCREEN_HEIGHT < 700;
@@ -144,7 +145,7 @@ export default function ObjectDetailsScreen() {
       >
         <Ionicons name="arrow-back" size={24} color="#007AFF" />
         <Text style={styles.backButtonText}>Детали объекта</Text>
-        {user?.role === 'admin' && (
+        {canEdit(user) && (
           <TouchableOpacity 
             style={styles.editButton}
             onPress={handleEditObject}

@@ -9,21 +9,29 @@ import {
   Alert,
   ActivityIndicator,
   Switch,
+  Platform,
+  Dimensions,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../types/navigation';
 import { InspectionObject, ObjectType, FireSafetyClass } from '../types';
 import ObjectService from '../services/objectService';
+import { useAuth } from '../contexts/AuthContext';
+import { canEdit, canCreate } from '../utils/permissions';
 
 type AddEditObjectScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'AddEditObject'>;
 
 export default function AddEditObjectScreen() {
   const navigation = useNavigation<AddEditObjectScreenNavigationProp>();
   const route = useRoute();
-  const { objectId } = route.params as { objectId?: string };
+  const { user } = useAuth();
+  const { objectId, coordinates: initialCoordinates } = route.params as { 
+    objectId?: string;
+    coordinates?: { latitude: number; longitude: number };
+  };
 
   const [isLoading, setIsLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -35,8 +43,8 @@ export default function AddEditObjectScreen() {
   const [type, setType] = useState<ObjectType>('administrative');
   const [fireSafetyClass, setFireSafetyClass] = useState<FireSafetyClass>('F1.1');
   const [coordinates, setCoordinates] = useState({
-    latitude: 53.630,
-    longitude: 55.950,
+    latitude: initialCoordinates?.latitude || 53.630,
+    longitude: initialCoordinates?.longitude || 55.950,
   });
 
   // Ответственное лицо
@@ -53,14 +61,40 @@ export default function AddEditObjectScreen() {
     if (objectId) {
       setIsEditing(true);
       loadObject();
+    } else {
+      setIsEditing(false);
     }
   }, [objectId]);
+
+  useEffect(() => {
+    // Проверка прав доступа
+    if (isEditing && !canEdit(user)) {
+      Alert.alert('Доступ запрещен', 'У вас нет прав для редактирования объектов');
+      navigation.goBack();
+      return;
+    }
+    if (!isEditing && !canCreate(user)) {
+      Alert.alert('Доступ запрещен', 'У вас нет прав для создания объектов');
+      navigation.goBack();
+      return;
+    }
+  }, [isEditing, user]);
 
   useEffect(() => {
     if (useSameAddress) {
       setActualAddress(legalAddress);
     }
   }, [legalAddress, useSameAddress]);
+
+  // Обновляем координаты если они были переданы из MapPicker
+  useFocusEffect(
+    React.useCallback(() => {
+      const params = route.params as any;
+      if (params?.coordinates) {
+        setCoordinates(params.coordinates);
+      }
+    }, [route.params])
+  );
 
   const loadObject = async () => {
     if (!objectId) return;
@@ -172,9 +206,12 @@ export default function AddEditObjectScreen() {
   };
 
   const handleSelectOnMap = () => {
-    // TODO: Реализовать навигацию на экран выбора координат на карте
-    // Временная заглушка для отображения фронта - функция будет реализована позже
-    Alert.alert('Выбор на карте', 'Функция выбора координат на карте будет реализована позже');
+    navigation.navigate('MapPicker', {
+      initialCoordinates: coordinates,
+      onSelect: (selectedCoords: { latitude: number; longitude: number }) => {
+        setCoordinates(selectedCoords);
+      },
+    });
   };
 
   if (isLoading && isEditing) {
@@ -299,8 +336,15 @@ export default function AddEditObjectScreen() {
           />
         </View>
 
+        <View style={styles.coordinatesDisplay}>
+          <Text style={styles.coordinatesLabel}>Координаты:</Text>
+          <Text style={styles.coordinatesText}>
+            {coordinates.latitude.toFixed(6)}, {coordinates.longitude.toFixed(6)}
+          </Text>
+        </View>
+
         <TouchableOpacity style={styles.mapButton} onPress={handleSelectOnMap}>
-          <Ionicons name="map" size={20} color="#007AFF" />
+          <Ionicons name="map" size={20} color="#000" />
           <Text style={styles.mapButtonText}>Выбрать на карте</Text>
         </TouchableOpacity>
       </View>
@@ -400,6 +444,9 @@ export default function AddEditObjectScreen() {
   );
 }
 
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const isSmallScreen = SCREEN_HEIGHT < 700;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -413,46 +460,46 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 16,
-    fontSize: 16,
+    fontSize: isSmallScreen ? 14 : 16,
     color: '#666',
   },
   header: {
-    padding: 16,
+    padding: isSmallScreen ? 12 : 16,
     borderBottomWidth: 1,
     borderBottomColor: '#F2F2F7',
   },
   title: {
-    fontSize: 20,
+    fontSize: isSmallScreen ? 18 : 20,
     fontWeight: 'bold',
     color: '#000000',
     textAlign: 'center',
   },
   section: {
-    padding: 16,
+    padding: isSmallScreen ? 12 : 16,
     borderBottomWidth: 1,
     borderBottomColor: '#F2F2F7',
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: isSmallScreen ? 16 : 18,
     fontWeight: 'bold',
     color: '#000000',
-    marginBottom: 16,
+    marginBottom: isSmallScreen ? 12 : 16,
   },
   inputGroup: {
-    marginBottom: 16,
+    marginBottom: isSmallScreen ? 12 : 16,
   },
   label: {
-    fontSize: 14,
+    fontSize: isSmallScreen ? 13 : 14,
     fontWeight: '600',
     color: '#000000',
-    marginBottom: 8,
+    marginBottom: isSmallScreen ? 6 : 8,
   },
   input: {
     borderWidth: 1,
     borderColor: '#E5E5EA',
     borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
+    padding: isSmallScreen ? 10 : 12,
+    fontSize: isSmallScreen ? 15 : 16,
     color: '#000000',
     backgroundColor: '#FFFFFF',
   },
@@ -491,6 +538,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#000000',
   },
+  coordinatesDisplay: {
+    marginBottom: 12,
+    padding: 12,
+    backgroundColor: '#F8F8F8',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  coordinatesLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  coordinatesText: {
+    fontSize: 13,
+    color: '#000',
+    fontWeight: '500',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
   mapButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -499,45 +565,46 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: '#000',
+    marginBottom: 16,
   },
   mapButtonText: {
-    color: '#007AFF',
+    color: '#000',
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 8,
   },
   actions: {
-    padding: 16,
+    padding: isSmallScreen ? 12 : 16,
   },
   saveButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#007AFF',
-    padding: 16,
+    backgroundColor: '#000',
+    padding: isSmallScreen ? 14 : 16,
     borderRadius: 8,
-    marginBottom: 12,
+    marginBottom: isSmallScreen ? 10 : 12,
   },
   saveButtonDisabled: {
     opacity: 0.6,
   },
   saveButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: isSmallScreen ? 15 : 16,
     fontWeight: '600',
     marginLeft: 8,
   },
   cancelButton: {
     alignItems: 'center',
-    padding: 16,
+    padding: isSmallScreen ? 14 : 16,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E5E5EA',
   },
   cancelButtonText: {
-    color: '#007AFF',
-    fontSize: 16,
+    color: '#000',
+    fontSize: isSmallScreen ? 15 : 16,
     fontWeight: '600',
   },
 });
