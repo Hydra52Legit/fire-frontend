@@ -157,3 +157,57 @@ export interface FireSafetyStats {
   expiredEquipment: number;
   upcomingInspections: number;
 }
+
+export type ReportType = 
+  | 'expired_objects'      // Реестр объектов с истекшими сроками
+  | 'violations_stats'     // Статистика по нарушениям
+  | 'inspection_act'       // Акт проверки
+  | 'equipment_status';    // Статус оборудования
+
+export type ViolationType =
+  | 'fire_safety'          // Нарушение пожарной безопасности
+  | 'equipment_expired'    // Просроченное оборудование
+  | 'documentation'        // Документация
+  | 'evacuation'           // Эвакуационные пути
+  | 'other';               // Иные нарушения
+
+export interface Violation {
+  id: string;
+  type: ViolationType;
+  description: string;
+  objectId: string;
+  severity: 'low' | 'medium' | 'high';
+  status: 'active' | 'fixed' | 'in_progress';
+  detectedDate: string;
+  createdAt?: string;
+  updatedAt?: string;
+  fixedDate?: string;
+  photos?: string[];
+  comments?: string;
+  inspector: string;
+}
+
+export interface InspectionReport {
+  id: string;
+  objectId: string;
+  inspectorId: string;
+  inspectionDate: string;
+  status: 'planned' | 'in_progress' | 'completed' | 'cancelled';
+  violations: Violation[];
+  photos: string[];
+  comments?: string;
+  recommendations?: string;
+  nextInspectionDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReportData {
+  id: string;
+  type: ReportType;
+  title: string;
+  description: string;
+  generatedAt: string;
+  data: any;
+  fileUrl?: string;
+}

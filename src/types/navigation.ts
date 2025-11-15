@@ -6,6 +6,7 @@ export type RootStackParamList = {
   
   // Основные экраны
   Home: undefined;
+  
   Profile: undefined;
   Reports: undefined;
   Tabs: undefined;
@@ -28,9 +29,10 @@ export type RootStackParamList = {
 
   // Настройки уведомлений
   NotificationSettings: undefined;
+  CreateInspection: undefined;
+  
 };
 
-// ДОБАВЬТЕ ЭТОТ ТИП:
 export type TabParamList = {
   Home: undefined;
   Objects: undefined;

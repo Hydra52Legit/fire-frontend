@@ -18,6 +18,8 @@ import AddEditObjectScreen from './src/screens/AddEditObjectScreen';
 import FireSafetyScreen from './src/screens/FireSafetyScreen';
 import { NotificationProvider } from './src/contexts/NotificationContext';
 import NotificationSettingsScreen from './src/screens/NotificationSettingsScreen';
+import CreateInspectionScreen from './src/screens/CreateInspectionScreen';
+import ReportsScreen from './src/screens/ReportScreen';
 
 import ExtinguishersListScreen from './src/screens/ExtinguishersListScreen';
 import AddEditExtinguisherScreen from './src/screens/AddEditinguisherScreen';
