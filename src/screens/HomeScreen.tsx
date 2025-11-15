@@ -328,50 +328,49 @@ export default function HomeScreen() {
     }
   };
 
-  // Быстрая статистика для главного экрана
   const QuickStats = () => (
-  <View style={styles.quickStats}>
-    <Text style={styles.quickStatsTitle}>Быстрая статистика</Text>
-    <View style={styles.statsGrid}>
-      <TouchableOpacity 
-        style={styles.statItem}
-        onPress={() => navigation.navigate('ExtinguishersList')}
-      >
-        <Ionicons name="flame" size={24} color="#FF6B6B" />
-        <Text style={styles.statNumber}>{stats.totalExtinguishers}</Text>
-        <Text style={styles.statLabel}>Огнетушители</Text>
-        {stats.expiredExtinguishers > 0 && (
-          <View style={styles.warningBadge}>
-            <Text style={styles.warningText}>{stats.expiredExtinguishers}</Text>
-          </View>
-        )}
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={styles.statItem}
-        onPress={() => navigation.navigate('EquipmentList')}
-      >
-        <Ionicons name="hardware-chip" size={24} color="#4ECDC4" />
-        <Text style={styles.statNumber}>{stats.totalEquipment}</Text>
-        <Text style={styles.statLabel}>Оборудование</Text>
-        {stats.expiredEquipment > 0 && (
-          <View style={styles.warningBadge}>
-            <Text style={styles.warningText}>{stats.expiredEquipment}</Text>
-          </View>
-        )}
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={styles.statItem}
-        onPress={() => navigation.navigate('Reports')} 
-      >
-        <Ionicons name="document-text" size={24} color="#9B5DE5" />
-        <Text style={styles.statNumber}>0</Text>
-        <Text style={styles.statLabel}>Нарушения</Text>
-      </TouchableOpacity>
+    <View style={styles.quickStats}>
+      <Text style={styles.quickStatsTitle}>Быстрая статистика</Text>
+      <View style={styles.statsGrid}>
+        <TouchableOpacity 
+          style={styles.statItem}
+          onPress={() => navigation.navigate('ExtinguishersList')}
+        >
+          <Ionicons name="flame" size={24} color="#FF6B6B" />
+          <Text style={styles.statNumber}>{stats.totalExtinguishers}</Text>
+          <Text style={styles.statLabel}>Огнетушители</Text>
+          {stats.expiredExtinguishers > 0 && (
+            <View style={styles.warningBadge}>
+              <Text style={styles.warningText}>{stats.expiredExtinguishers}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.statItem}
+          onPress={() => navigation.navigate('EquipmentList')}
+        >
+          <Ionicons name="hardware-chip" size={24} color="#4ECDC4" />
+          <Text style={styles.statNumber}>{stats.totalEquipment}</Text>
+          <Text style={styles.statLabel}>Оборудование</Text>
+          {stats.expiredEquipment > 0 && (
+            <View style={styles.warningBadge}>
+              <Text style={styles.warningText}>{stats.expiredEquipment}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.statItem}
+          onPress={() => navigation.navigate('Reports')} 
+        >
+          <Ionicons name="document-text" size={24} color="#9B5DE5" />
+          <Text style={styles.statNumber}>0</Text>
+          <Text style={styles.statLabel}>Нарушения</Text>
+        </TouchableOpacity>
+      </View>
     </View>
-  </View>
-);
+  );
 
   return (
     <View style={styles.container}>

@@ -12,8 +12,9 @@ import HomeScreen from './src/screens/HomeScreen';
 import ObjectsScreen from './src/screens/ObjectsScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import PinCodeScreen from './src/screens/PinCodeScreen';
+import ObjectsListScreen from './src/screens/ObjectsListScreen';
 import ObjectDetailsScreen from './src/screens/ObjectDetails';
-import AddEditObjectScreen from './src/screens/ AddEditObjectScreen'; 
+import AddEditObjectScreen from './src/screens/AddEditObjectScreen'; 
 import FireSafetyScreen from './src/screens/FireSafetyScreen';
 import { NotificationProvider } from './src/contexts/NotificationContext';
 import NotificationSettingsScreen from './src/screens/NotificationSettingsScreen';
@@ -80,19 +81,7 @@ function TabNavigator() {
 }
 
 function AppContent() {
-  // const { user, isLoading } = useAuth();
-  const isLoading = false;
-  const user = {
-    id: '1',
-    email: 'admin@fireinspection.ru',
-    fullName: 'Иванов Алексей Петрович',
-    position: 'Главный инспектор',
-    role: 'admin',
-    phone: '+7 (999) 123-45-67',
-    assignedObjects: ['1', '2', '3'],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
+  const { user, isLoading } = useAuth();
   
   if (isLoading) {
     return (
@@ -108,32 +97,31 @@ function AppContent() {
       <Stack.Navigator 
         screenOptions={{ 
           headerShown: false,
-          animation: 'slide_from_right' // Плавная анимация переходов
+          animation: 'slide_from_right'
         }}
       >
-        {/* Основные экраны */}
-        <Stack.Screen name="Tabs" component={TabNavigator} />
-        <Stack.Screen name="ObjectDetails" component={ObjectDetailsScreen} />
-        <Stack.Screen name="AddEditObject" component={AddEditObjectScreen} />
-        <Stack.Screen name="FireSafety" component={FireSafetyScreen} />
-        
-        
-        <Stack.Screen name="ExtinguishersList" component={ExtinguishersListScreen} />
-        <Stack.Screen name="AddEditExtinguisher" component={AddEditExtinguisherScreen} />
-        <Stack.Screen name="EquipmentList" component={EquipmentListScreen} />
-        <Stack.Screen name="AddEditEquipment" component={AddEditEquipmentScreen} />
-        <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
-        <Stack.Screen name="CreateInspection" component={CreateInspectionScreen} />
-        <Stack.Screen 
-          name="Reports" 
-          component={ReportsScreen} 
-          options={{ title: 'Отчеты' }}
-        />
-        {/* Экран авторизации */}
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Register" component={RegisterScreen} />
-        <Stack.Screen name="PinCode" component={PinCodeScreen} />
-        
+        {user ? (
+          // Пользователь авторизован - показываем основные экраны
+          <>
+            <Stack.Screen name="Tabs" component={TabNavigator} />
+            <Stack.Screen name="ObjectDetails" component={ObjectDetailsScreen} />
+            <Stack.Screen name="ObjectsList" component={ObjectsListScreen} />
+            <Stack.Screen name="AddEditObject" component={AddEditObjectScreen} />
+            <Stack.Screen name="FireSafety" component={FireSafetyScreen} />
+            <Stack.Screen name="ExtinguishersList" component={ExtinguishersListScreen} />
+            <Stack.Screen name="AddEditExtinguisher" component={AddEditExtinguisherScreen} />
+            <Stack.Screen name="EquipmentList" component={EquipmentListScreen} />
+            <Stack.Screen name="AddEditEquipment" component={AddEditEquipmentScreen} />
+            <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
+            <Stack.Screen name="PinCode" component={PinCodeScreen} />
+          </>
+        ) : (
+          // Пользователь не авторизован - показываем экраны авторизации
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Register" component={RegisterScreen} />
+          </>
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );

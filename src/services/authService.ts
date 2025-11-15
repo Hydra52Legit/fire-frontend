@@ -1,13 +1,23 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, UserRole } from '../types';
+import apiClient from './apiClient';
+import API_CONFIG from '../config/api.config';
 
 const STORAGE_KEYS = {
   CURRENT_USER: 'fire_inspection_current_user',
-  USERS: 'fire_inspection_users',
-  USER_TOKEN: 'fire_inspection_user_token',
   PIN_CODE_SET: 'fire_inspection_pin_code_set',
   USER_PIN: 'fire_inspection_user_pin',
 };
+
+interface LoginResponse {
+  token: string;
+  user: User;
+}
+
+interface RegisterResponse {
+  token: string;
+  user: User;
+}
 
 class AuthService {
   // Регистрация нового пользователя
@@ -17,68 +27,67 @@ class AuthService {
     fullName: string;
     position: string;
     phone?: string;
-    role?: UserRole;
   }): Promise<User> {
     try {
-      // Проверяем, нет ли уже пользователя с таким email
-      const existingUsers = await this.getUsers();
-      const existingUser = existingUsers.find(u => u.email === userData.email);
-      
-      if (existingUser) {
-        throw new Error('Пользователь с таким email уже существует');
-      }
+      // Бэкенд ожидает email и password в заголовках, а остальные данные в теле
+      const response = await apiClient.post<RegisterResponse>(
+        API_CONFIG.ENDPOINTS.AUTH.REGISTER,
+        {
+          fullName: userData.fullName,
+          position: userData.position,
+          phone: userData.phone,
+        },
+        {
+          headers: {
+            email: userData.email,
+            password: userData.password,
+          },
+        }
+      );
 
-      // Создаем нового пользователя
-      const newUser: User = {
-        id: Date.now().toString(),
-        email: userData.email,
-        fullName: userData.fullName,
-        position: userData.position,
-        phone: userData.phone,
-        role: userData.role || 'inspector', // По умолчанию инспектор
-        assignedObjects: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+      // Сохраняем токен и пользователя
+      await apiClient.setToken(response.token);
+      await AsyncStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(response.user));
 
-      // Сохраняем пользователя
-      const updatedUsers = [...existingUsers, newUser];
-      await AsyncStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers));
-
-      return newUser;
-    } catch (error) {
+      return response.user;
+    } catch (error: any) {
       console.error('Registration error:', error);
-      throw error;
+      const errorMessage = error.message || 'Ошибка при регистрации';
+      throw new Error(errorMessage);
     }
   }
 
   // Вход пользователя
   async login(email: string, password: string): Promise<User> {
     try {
-      const users = await this.getUsers();
-      const user = users.find(u => u.email === email);
+      // Бэкенд использует GET запрос с email и password в заголовках
+      const response = await apiClient.get<LoginResponse>(
+        API_CONFIG.ENDPOINTS.AUTH.LOGIN,
+        {
+          headers: {
+            email,
+            password,
+          },
+        }
+      );
 
-      if (!user) {
-        throw new Error('Пользователь не найден');
-      }
+      // Сохраняем токен и пользователя
+      await apiClient.setToken(response.token);
+      await AsyncStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(response.user));
 
-      // В реальном приложении здесь была бы проверка пароля через бекенд
-      // Сейчас просто имитируем успешный вход
-      await AsyncStorage.setItem(STORAGE_KEYS.USER_TOKEN, 'demo-token-' + Date.now());
-      await AsyncStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
-
-      return user;
-    } catch (error) {
+      return response.user;
+    } catch (error: any) {
       console.error('Login error:', error);
-      throw error;
+      const errorMessage = error.message || 'Неверный email или пароль';
+      throw new Error(errorMessage);
     }
   }
 
   // Выход пользователя
   async logout(): Promise<void> {
     try {
+      await apiClient.clearToken();
       await AsyncStorage.multiRemove([
-        STORAGE_KEYS.USER_TOKEN,
         STORAGE_KEYS.CURRENT_USER,
         STORAGE_KEYS.PIN_CODE_SET,
         STORAGE_KEYS.USER_PIN,
@@ -92,8 +101,21 @@ class AuthService {
   // Получение текущего пользователя
   async getCurrentUser(): Promise<User | null> {
     try {
+      // Сначала пытаемся получить из локального хранилища
       const userJson = await AsyncStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-      return userJson ? JSON.parse(userJson) : null;
+      if (userJson) {
+        return JSON.parse(userJson);
+      }
+
+      // Если нет в локальном хранилище, пытаемся получить с сервера
+      try {
+        const user = await apiClient.get<User>(API_CONFIG.ENDPOINTS.AUTH.ME);
+        await AsyncStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+        return user;
+      } catch (error) {
+        // Если не удалось получить с сервера, возвращаем null
+        return null;
+      }
     } catch (error) {
       console.error('Get current user error:', error);
       return null;
@@ -103,18 +125,33 @@ class AuthService {
   // Проверка авторизации
   async checkAuth(): Promise<{ user: User | null; needsPin: boolean }> {
     try {
-      const token = await AsyncStorage.getItem(STORAGE_KEYS.USER_TOKEN);
-      const user = await this.getCurrentUser();
-      const pinSet = await AsyncStorage.getItem(STORAGE_KEYS.PIN_CODE_SET);
-
-      if (token && user) {
+      try {
+        const user = await apiClient.get<User>(API_CONFIG.ENDPOINTS.AUTH.ME);
+        await AsyncStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+        const pinSet = await AsyncStorage.getItem(STORAGE_KEYS.PIN_CODE_SET);
+        
         return {
           user,
           needsPin: pinSet === 'true',
         };
+      } catch (error: any) {
+        // Если токен невалидный (401), очищаем данные
+        if (error.status === 401) {
+          await this.logout();
+          return { user: null, needsPin: false };
+        }
+        // Если ошибка сети, пытаемся использовать сохраненного пользователя
+        const userJson = await AsyncStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+        if (userJson) {
+          const user = JSON.parse(userJson);
+          const pinSet = await AsyncStorage.getItem(STORAGE_KEYS.PIN_CODE_SET);
+          return {
+            user,
+            needsPin: pinSet === 'true',
+          };
+        }
+        return { user: null, needsPin: false };
       }
-
-      return { user: null, needsPin: false };
     } catch (error) {
       console.error('Auth check error:', error);
       return { user: null, needsPin: false };
@@ -143,47 +180,6 @@ class AuthService {
     }
   }
 
-  // Получение всех пользователей (для админа)
-  async getUsers(): Promise<User[]> {
-    try {
-      const usersJson = await AsyncStorage.getItem(STORAGE_KEYS.USERS);
-      if (usersJson) {
-        return JSON.parse(usersJson);
-      }
-
-      // Создаем тестовых пользователей при первом запуске
-      const defaultUsers: User[] = [
-        {
-          id: '1',
-          email: 'admin@fireinspection.ru',
-          fullName: 'Иванов Алексей Петрович',
-          position: 'Главный инспектор',
-          role: 'admin',
-          phone: '+7 (999) 123-45-67',
-          assignedObjects: ['1', '2', '3'],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: '2',
-          email: 'inspector@fireinspection.ru',
-          fullName: 'Петрова Мария Сергеевна',
-          position: 'Инспектор',
-          role: 'inspector',
-          phone: '+7 (999) 765-43-21',
-          assignedObjects: ['4'],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
-      ];
-
-      await AsyncStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(defaultUsers));
-      return defaultUsers;
-    } catch (error) {
-      console.error('Get users error:', error);
-      return [];
-    }
-  }
 
   // Проверка прав администратора
   isAdmin(user: User): boolean {
