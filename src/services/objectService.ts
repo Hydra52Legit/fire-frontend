@@ -59,6 +59,18 @@ async function transformObjectToBackend(obj: Partial<InspectionObject>): Promise
   if (obj.status !== undefined) result.status = obj.status;
   // createdBy теперь устанавливается на бэкенде из токена, не передаем с фронтенда
 
+  // Добавляем данные ответственного лица при создании объекта
+  if (obj.responsiblePersons && obj.responsiblePersons.length > 0) {
+    const responsiblePerson = obj.responsiblePersons[0];
+    result.responsiblePerson = {
+      fullName: responsiblePerson.fullName,
+      position: responsiblePerson.position,
+      workPhone: responsiblePerson.workPhone || undefined,
+      mobilePhone: responsiblePerson.mobilePhone || undefined,
+      email: responsiblePerson.email || undefined,
+    };
+  }
+
   return result;
 }
 

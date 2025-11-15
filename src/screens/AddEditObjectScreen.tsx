@@ -135,6 +135,19 @@ export default function AddEditObjectScreen() {
     }
   };
 
+  const validateEmail = (email: string): boolean => {
+    if (!email.trim()) return true; // Email необязателен
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePhone = (phone: string): boolean => {
+    if (!phone.trim()) return true; // Телефон необязателен
+    // Проверяем формат российского телефона (может быть с +7 или без)
+    const phoneRegex = /^(\+7|7|8)?[\s\-]?\(?[0-9]{3}\)?[\s\-]?[0-9]{3}[\s\-]?[0-9]{2}[\s\-]?[0-9]{2}$/;
+    return phoneRegex.test(phone.replace(/\s/g, ''));
+  };
+
   const validateForm = (): boolean => {
     if (!name.trim()) {
       Alert.alert('Ошибка', 'Введите наименование объекта');
@@ -156,6 +169,20 @@ export default function AddEditObjectScreen() {
       Alert.alert('Ошибка', 'Введите должность ответственного лица');
       return false;
     }
+    // Валидация email
+    if (email.trim() && !validateEmail(email)) {
+      Alert.alert('Ошибка', 'Введите корректный email адрес');
+      return false;
+    }
+    // Валидация телефонов
+    if (workPhone.trim() && !validatePhone(workPhone)) {
+      Alert.alert('Ошибка', 'Введите корректный рабочий телефон');
+      return false;
+    }
+    if (mobilePhone.trim() && !validatePhone(mobilePhone)) {
+      Alert.alert('Ошибка', 'Введите корректный мобильный телефон');
+      return false;
+    }
     return true;
   };
 
@@ -165,36 +192,63 @@ export default function AddEditObjectScreen() {
     try {
       setIsLoading(true);
 
-      const objectData: Omit<InspectionObject, "id"> & { id?: string } = {
-        id: objectId,
-        name: name.trim(),
-        legalAddress: legalAddress.trim(),
-        actualAddress: actualAddress.trim(),
-        createdBy: user?.id || '',
-        coordinates: coordinates || { latitude: 53.630, longitude: 55.950 },
-        type,
-        fireSafetyClass,
-        responsiblePersons: [
-          {
-            id: responsibleId.trim(),
-            fullName: responsibleName.trim(),
-            position: responsiblePosition.trim(),
-            workPhone: workPhone.trim() || undefined,
-            mobilePhone: mobilePhone.trim() || undefined,
-            email: email.trim() || undefined,
-            assignedDate: new Date().toISOString(),
-            isCurrent: true,
-          },
-        ],
-        documents: [],
-        inspections: [],
-        status: 'active',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        // createdBy устанавливается на бэкенде из токена
-      };
+      // При создании нового объекта отправляем данные с ResponsiblePerson
+      if (!isEditing) {
+        const objectData: Partial<InspectionObject> = {
+          name: name.trim(),
+          legalAddress: legalAddress.trim(),
+          actualAddress: actualAddress.trim(),
+          coordinates: coordinates || { latitude: 53.630, longitude: 55.950 },
+          type,
+          fireSafetyClass,
+          responsiblePersons: [
+            {
+              id: '', // ID будет создан на бэкенде
+              fullName: responsibleName.trim(),
+              position: responsiblePosition.trim(),
+              workPhone: workPhone.trim() || undefined,
+              mobilePhone: mobilePhone.trim() || undefined,
+              email: email.trim() || undefined,
+              assignedDate: new Date().toISOString(),
+              isCurrent: true,
+            },
+          ],
+          status: 'active',
+        };
 
-      await ObjectService.saveObject(objectData);
+        await ObjectService.createObject(objectData);
+      } else {
+        // При редактировании используем стандартный метод обновления
+        const objectData: Omit<InspectionObject, "id"> & { id?: string } = {
+          id: objectId,
+          name: name.trim(),
+          legalAddress: legalAddress.trim(),
+          actualAddress: actualAddress.trim(),
+          createdBy: user?.id || '',
+          coordinates: coordinates || { latitude: 53.630, longitude: 55.950 },
+          type,
+          fireSafetyClass,
+          responsiblePersons: [
+            {
+              id: responsibleId.trim() || '',
+              fullName: responsibleName.trim(),
+              position: responsiblePosition.trim(),
+              workPhone: workPhone.trim() || undefined,
+              mobilePhone: mobilePhone.trim() || undefined,
+              email: email.trim() || undefined,
+              assignedDate: new Date().toISOString(),
+              isCurrent: true,
+            },
+          ],
+          documents: [],
+          inspections: [],
+          status: 'active',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        await ObjectService.saveObject(objectData);
+      }
 
       Alert.alert(
         'Успех',
@@ -206,8 +260,10 @@ export default function AddEditObjectScreen() {
           },
         ]
       );
-    } catch (error) {
-      Alert.alert('Ошибка', 'Не удалось сохранить объект');
+    } catch (error: any) {
+      console.error('Error saving object:', error);
+      const errorMessage = error?.message || 'Не удалось сохранить объект';
+      Alert.alert('Ошибка', errorMessage);
     } finally {
       setIsLoading(false);
     }
