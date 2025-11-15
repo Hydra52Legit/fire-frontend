@@ -124,8 +124,8 @@ export default function AddEditObjectScreen() {
     try {
       setIsLoading(true);
 
-      const objectData: InspectionObject = {
-        id: objectId || Date.now().toString(),
+      const objectData: Omit<InspectionObject, "id"> & { id?: string } = {
+        id: objectId,
         name: name.trim(),
         legalAddress: legalAddress.trim(),
         actualAddress: actualAddress.trim(),
@@ -149,7 +149,7 @@ export default function AddEditObjectScreen() {
         status: 'active',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        createdBy: 'admin', // В реальном приложении брать из контекста
+        // createdBy устанавливается на бэкенде из токена
       };
 
       await ObjectService.saveObject(objectData);

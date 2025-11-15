@@ -9,15 +9,7 @@ import { Platform } from 'react-native';
 
 const getBaseUrl = () => {
   if (__DEV__) {
-    if (Platform.OS === 'android') {
-      // Для Android эмулятора: сначала пробуем 10.0.2.2, если не работает - используйте ваш локальный IP
-      // Если 10.0.2.2 не работает, замените на ваш IP: 'http://100.71.159.26:3001/api'
-      return 'http://100.71.159.26:3001/api'; // Ваш локальный IP адрес
-    } else if (Platform.OS === 'ios') {
-      return 'http://localhost:3001/api';
-    } else {
-      return 'http://localhost:3001/api';
-    }
+    return 'http://100.71.159.26:3001/api'; // Ваш локальный IP адрес
   } else {
     return 'https://your-production-api.com/api';
   }

@@ -132,7 +132,7 @@ export default function AddEditObjectScreen() {
         status: 'active',
         createdAt: isEditMode ? new Date().toISOString() : new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        createdBy: user?.id || 'unknown',
+        // createdBy устанавливается на бэкенде из токена
       };
 
       await ObjectService.saveObject(objectData);

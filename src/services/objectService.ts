@@ -57,11 +57,7 @@ async function transformObjectToBackend(obj: Partial<InspectionObject>): Promise
     result.fireSafetyClass = normalizeFireSafetyClass(obj.fireSafetyClass);
   }
   if (obj.status !== undefined) result.status = obj.status;
-  if (obj.createdBy !== undefined) {
-    result.createdBy = obj.createdBy;
-  } else if (currentUser) {
-    result.createdBy = currentUser.id;
-  }
+  // createdBy теперь устанавливается на бэкенде из токена, не передаем с фронтенда
 
   return result;
 }
@@ -117,7 +113,7 @@ class ObjectService {
   }
 
   // Сохранение объекта (создание или обновление)
-  async saveObject(object: InspectionObject): Promise<InspectionObject> {
+  async saveObject(object: Omit<InspectionObject, "id"> & { id?: string }): Promise<InspectionObject> {
     try {
       if (object.id) {
         return await this.updateObject(object.id, object);
