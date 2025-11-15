@@ -260,6 +260,43 @@ export default function HomeScreen() {
       adminOnly: true,
       color: '#06D6A0'
     },
+    {
+    id: 'violations_reports',
+    title: 'Отчеты и нарушения',
+    description: 'Просмотр нарушений и статистики',
+    icon: 'document-text',
+    screen: 'Report',
+    adminOnly: false,
+    color: '#9B5DE5'
+  },
+  {
+    id: 'reports',
+    title: 'Аналитика',
+    description: 'Расширенная аналитика и отчетность',
+    icon: 'analytics',
+    screen: 'Reports',
+    adminOnly: true,
+    color: '#00BBF9'
+  },
+  {
+    id: 'notifications',
+    title: 'Уведомления',
+    description: 'Настройка оповещений',
+    icon: 'notifications',
+    screen: 'NotificationSettings',
+    adminOnly: false,
+    color: '#06D6A0'
+  },
+  {
+    id: 'add_object',
+    title: 'Добавление объектов',
+    description: 'Доступно администраторам',
+    icon: 'add-circle',
+    screen: 'AddEditObject',
+    adminOnly: true,
+    color: '#FF9500'
+  },
+
   ];
 
   const handleModulePress = (module: any) => {
@@ -293,48 +330,48 @@ export default function HomeScreen() {
 
   // Быстрая статистика для главного экрана
   const QuickStats = () => (
-    <View style={styles.quickStats}>
-      <Text style={styles.quickStatsTitle}>Быстрая статистика</Text>
-      <View style={styles.statsGrid}>
-        <TouchableOpacity 
-          style={styles.statItem}
-          onPress={() => navigation.navigate('ExtinguishersList')}
-        >
-          <Ionicons name="flame" size={24} color="#FF6B6B" />
-          <Text style={styles.statNumber}>{stats.totalExtinguishers}</Text>
-          <Text style={styles.statLabel}>Огнетушители</Text>
-          {stats.expiredExtinguishers > 0 && (
-            <View style={styles.warningBadge}>
-              <Text style={styles.warningText}>{stats.expiredExtinguishers}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.statItem}
-          onPress={() => navigation.navigate('EquipmentList')}
-        >
-          <Ionicons name="hardware-chip" size={24} color="#4ECDC4" />
-          <Text style={styles.statNumber}>{stats.totalEquipment}</Text>
-          <Text style={styles.statLabel}>Оборудование</Text>
-          {stats.expiredEquipment > 0 && (
-            <View style={styles.warningBadge}>
-              <Text style={styles.warningText}>{stats.expiredEquipment}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.statItem}
-          onPress={() => navigation.navigate('ObjectsList')}
-        >
-          <Ionicons name="business" size={24} color="#45B7D1" />
-          <Text style={styles.statNumber}>{objects.length}</Text>
-          <Text style={styles.statLabel}>Объекты</Text>
-        </TouchableOpacity>
-      </View>
+  <View style={styles.quickStats}>
+    <Text style={styles.quickStatsTitle}>Быстрая статистика</Text>
+    <View style={styles.statsGrid}>
+      <TouchableOpacity 
+        style={styles.statItem}
+        onPress={() => navigation.navigate('ExtinguishersList')}
+      >
+        <Ionicons name="flame" size={24} color="#FF6B6B" />
+        <Text style={styles.statNumber}>{stats.totalExtinguishers}</Text>
+        <Text style={styles.statLabel}>Огнетушители</Text>
+        {stats.expiredExtinguishers > 0 && (
+          <View style={styles.warningBadge}>
+            <Text style={styles.warningText}>{stats.expiredExtinguishers}</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+      
+      <TouchableOpacity 
+        style={styles.statItem}
+        onPress={() => navigation.navigate('EquipmentList')}
+      >
+        <Ionicons name="hardware-chip" size={24} color="#4ECDC4" />
+        <Text style={styles.statNumber}>{stats.totalEquipment}</Text>
+        <Text style={styles.statLabel}>Оборудование</Text>
+        {stats.expiredEquipment > 0 && (
+          <View style={styles.warningBadge}>
+            <Text style={styles.warningText}>{stats.expiredEquipment}</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+      
+      <TouchableOpacity 
+        style={styles.statItem}
+        onPress={() => navigation.navigate('Reports')} 
+      >
+        <Ionicons name="document-text" size={24} color="#9B5DE5" />
+        <Text style={styles.statNumber}>0</Text>
+        <Text style={styles.statLabel}>Нарушения</Text>
+      </TouchableOpacity>
     </View>
-  );
+  </View>
+);
 
   return (
     <View style={styles.container}>
