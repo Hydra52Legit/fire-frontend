@@ -16,6 +16,9 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../types/navigation';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
+import { ValidatedTextInput } from '../components/forms';
+import { spacing, theme as themeConfig } from '../theme';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -25,6 +28,7 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const navigation = useNavigation<LoginScreenNavigationProp>();
   const { login } = useAuth();
+  const { colors } = useTheme();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -45,35 +49,47 @@ export default function LoginScreen() {
     }
   };
 
+  const styles = createStyles(colors);
+
   return (
     <KeyboardAvoidingView 
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
-        <Ionicons name="shield-checkmark" size={80} color="#007AFF" style={styles.logo} />
+        <Ionicons name="shield-checkmark" size={80} color={colors.primary} style={styles.logo} />
         <Text style={styles.title}>Пожарная Инспекция</Text>
         <Text style={styles.subtitle}>Вход в систему</Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor="#666"
+        <ValidatedTextInput
+          label="Email"
           value={email}
           onChangeText={setEmail}
+          placeholder="example@mail.com"
+          required
           autoCapitalize="none"
           keyboardType="email-address"
           autoComplete="email"
+          validator={(value) => {
+            if (!value) return 'Email обязателен для заполнения';
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(value)) return 'Введите корректный email адрес';
+            return null;
+          }}
         />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Пароль"
-          placeholderTextColor="#666"
+        <ValidatedTextInput
+          label="Пароль"
           value={password}
           onChangeText={setPassword}
+          placeholder="Введите пароль"
+          required
           secureTextEntry
           autoComplete="password"
+          validator={(value) => {
+            if (!value) return 'Пароль обязателен для заполнения';
+            return null;
+          }}
         />
 
         <TouchableOpacity 
@@ -101,69 +117,59 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000', // Черный фон
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
-    padding: 20,
+    padding: spacing.lg,
   },
   logo: {
     alignSelf: 'center',
-    marginBottom: 20,
+    marginBottom: spacing.lg,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 10,
-    color: '#fff', // Белый текст
+    marginBottom: spacing.sm,
+    color: colors.text,
   },
   subtitle: {
     fontSize: 18,
     textAlign: 'center',
-    marginBottom: 40,
-    color: '#fff', // Белый текст вместо серого
-  },
-  input: {
-    backgroundColor: '#000', // Черный фон полей
-    borderWidth: 1,
-    borderColor: '#fff', // Белые границы
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
-    fontSize: 16,
-    color: '#fff', // Белый текст в полях
+    marginBottom: spacing.xl,
+    color: colors.textSecondary,
   },
   button: {
-    backgroundColor: '#fff', // Белый фон кнопки
-    padding: 15,
-    borderRadius: 10,
+    backgroundColor: colors.primary,
+    padding: spacing.md,
+    borderRadius: themeConfig.borderRadius.md,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: spacing.md,
   },
   buttonDisabled: {
     opacity: 0.6,
-    backgroundColor: '#666', // Серый для disabled состояния
+    backgroundColor: colors.textTertiary,
   },
   buttonText: {
-    color: '#000', // Черный текст на кнопке
+    color: colors.textLight,
     fontSize: 18,
     fontWeight: '600',
   },
   registerLink: {
-    marginTop: 20,
+    marginTop: spacing.lg,
     alignItems: 'center',
   },
   registerLinkText: {
-    color: '#fff', // Белый текст
+    color: colors.text,
     fontSize: 16,
   },
   registerLinkBold: {
-    color: '#fff', // Белый текст вместо синего
+    color: colors.primary,
     fontWeight: '600',
     textDecorationLine: 'underline',
   },

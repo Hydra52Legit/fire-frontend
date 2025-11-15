@@ -19,8 +19,8 @@ const API_CONFIG = {
   // Базовый URL API бэкенда
   BASE_URL: getBaseUrl(),
   
-  // Таймаут запросов (в миллисекундах)
-  TIMEOUT: 30000,
+  // Таймаут запросов (в миллисекундах) - увеличен для медленных соединений
+  TIMEOUT: 60000, // 60 секунд
   
   // Пути к эндпоинтам
   ENDPOINTS: {
@@ -40,6 +40,7 @@ const API_CONFIG = {
       LIST: '/extinguishers',
       GET: (id: string) => `/extinguishers/${id}`,
       GET_BY_OBJECT: (objectId: string) => `/extinguishers/objects/${objectId}`,
+      GET_OBJECT: '/extinguishers/objects/:objectId',
       CREATE: '/extinguishers',
       UPDATE: (id: string) => `/extinguishers/${id}`,
       DELETE: (id: string) => `/extinguishers/${id}`,

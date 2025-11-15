@@ -31,6 +31,9 @@ export default function ReportsScreen() {
 
   useEffect(() => {
     loadData();
+    // Проверяем и генерируем отчеты по расписанию
+    const automationService = require('../services/automationService').default;
+    automationService.generateScheduledReports();
   }, []);
 
   const loadData = async () => {

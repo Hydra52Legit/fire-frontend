@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   Alert,
@@ -17,6 +16,9 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { RootStackParamList } from '../types/navigation';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
+import { FullNameInput, PhoneInput, ValidatedTextInput } from '../components/forms';
+import { spacing, theme as themeConfig } from '../theme';
 
 type RegisterScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Register'>;
 
@@ -28,29 +30,52 @@ export default function RegisterScreen() {
   const [position, setPosition] = useState('');
   const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [formValid, setFormValid] = useState({
+    fullName: false,
+    email: false,
+    password: false,
+    confirmPassword: false,
+    position: false,
+  });
+  
   const navigation = useNavigation<RegisterScreenNavigationProp>();
   const { register } = useAuth();
+  const { colors } = useTheme();
+
+  const validateEmail = (value: string): string | null => {
+    if (!value) {
+      return 'Email обязателен для заполнения';
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(value)) {
+      return 'Введите корректный email адрес';
+    }
+    return null;
+  };
+
+  const validatePassword = (value: string): string | null => {
+    if (!value) {
+      return 'Пароль обязателен для заполнения';
+    }
+    if (value.length < 6) {
+      return 'Пароль должен содержать минимум 6 символов';
+    }
+    return null;
+  };
+
+  const validateConfirmPassword = (value: string): string | null => {
+    if (!value) {
+      return 'Подтвердите пароль';
+    }
+    if (value !== password) {
+      return 'Пароли не совпадают';
+    }
+    return null;
+  };
 
   const handleRegister = async () => {
-    if (!email || !password || !confirmPassword || !fullName || !position) {
-      Alert.alert('Ошибка', 'Пожалуйста, заполните все обязательные поля');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      Alert.alert('Ошибка', 'Пароли не совпадают');
-      return;
-    }
-
-    if (password.length < 6) {
-      Alert.alert('Ошибка', 'Пароль должен содержать минимум 6 символов');
-      return;
-    }
-
-    // Проверка email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      Alert.alert('Ошибка', 'Введите корректный email адрес');
+    if (!formValid.fullName || !formValid.email || !formValid.password || !formValid.confirmPassword || !formValid.position) {
+      Alert.alert('Ошибка', 'Пожалуйста, заполните все обязательные поля корректно');
       return;
     }
 
@@ -74,6 +99,8 @@ export default function RegisterScreen() {
     }
   };
 
+  const styles = createStyles(colors);
+
   return (
     <KeyboardAvoidingView 
       style={styles.container}
@@ -84,68 +111,85 @@ export default function RegisterScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Ionicons name="person-add" size={60} color="#007AFF" />
+          <Ionicons name="person-add" size={60} color={colors.primary} />
           <Text style={styles.title}>Регистрация</Text>
           <Text style={styles.subtitle}>Создайте аккаунт для доступа к системе</Text>
         </View>
 
         <View style={styles.form}>
-          <TextInput
-            style={styles.input}
-            placeholder="ФИО *"
-            placeholderTextColor="#666"
+          <FullNameInput
             value={fullName}
             onChangeText={setFullName}
-            autoCapitalize="words"
+            onValidationChange={(isValid) => setFormValid(prev => ({ ...prev, fullName: isValid }))}
+            required
           />
 
-          <TextInput
-            style={styles.input}
-            placeholder="Должность *"
-            placeholderTextColor="#666"
+          <ValidatedTextInput
+            label="Должность"
             value={position}
             onChangeText={setPosition}
+            placeholder="Введите должность"
+            required
+            validator={(value) => {
+              if (!value.trim()) {
+                return 'Должность обязательна для заполнения';
+              }
+              if (value.length < 2) {
+                return 'Должность должна содержать минимум 2 символа';
+              }
+              return null;
+            }}
+            onValidationChange={(isValid) => setFormValid(prev => ({ ...prev, position: isValid }))}
             autoCapitalize="words"
           />
 
-          <TextInput
-            style={styles.input}
-            placeholder="Email *"
-            placeholderTextColor="#666"
+          <ValidatedTextInput
+            label="Email"
             value={email}
             onChangeText={setEmail}
+            placeholder="example@mail.com"
+            required
+            validator={validateEmail}
+            onValidationChange={(isValid) => setFormValid(prev => ({ ...prev, email: isValid }))}
             autoCapitalize="none"
             keyboardType="email-address"
             autoComplete="email"
           />
 
-          <TextInput
-            style={styles.input}
-            placeholder="Телефон"
-            placeholderTextColor="#666"
+          <PhoneInput
             value={phone}
             onChangeText={setPhone}
-            keyboardType="phone-pad"
-            autoComplete="tel"
+            onValidationChange={() => {}}
           />
 
-          <TextInput
-            style={styles.input}
-            placeholder="Пароль *"
-            placeholderTextColor="#666"
+          <ValidatedTextInput
+            label="Пароль"
             value={password}
             onChangeText={setPassword}
+            placeholder="Минимум 6 символов"
+            required
             secureTextEntry
+            validator={validatePassword}
+            onValidationChange={(isValid) => {
+              setFormValid(prev => ({ ...prev, password: isValid }));
+              // Перепроверяем подтверждение пароля при изменении пароля
+              if (confirmPassword) {
+                const confirmError = validateConfirmPassword(confirmPassword);
+                setFormValid(prev => ({ ...prev, confirmPassword: !confirmError }));
+              }
+            }}
             autoComplete="password-new"
           />
 
-          <TextInput
-            style={styles.input}
-            placeholder="Подтвердите пароль *"
-            placeholderTextColor="#666"
+          <ValidatedTextInput
+            label="Подтвердите пароль"
             value={confirmPassword}
             onChangeText={setConfirmPassword}
+            placeholder="Повторите пароль"
+            required
             secureTextEntry
+            validator={validateConfirmPassword}
+            onValidationChange={(isValid) => setFormValid(prev => ({ ...prev, confirmPassword: isValid }))}
             autoComplete="password-new"
           />
 
@@ -177,15 +221,15 @@ export default function RegisterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000', // Черный фон
+    backgroundColor: colors.background,
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: 20,
+    padding: spacing.lg,
     paddingVertical: 40,
   },
   header: {
@@ -195,64 +239,54 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#fff', // Белый текст
+    color: colors.text,
     marginTop: 20,
     marginBottom: 10,
   },
   subtitle: {
     fontSize: 16,
-    color: '#fff', // Белый текст вместо серого
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
   },
   form: {
     width: '100%',
   },
-  input: {
-    backgroundColor: '#000', // Черный фон полей
-    borderWidth: 1,
-    borderColor: '#fff', // Белые границы
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
-    fontSize: 16,
-    color: '#fff', // Белый текст в полях
-  },
   button: {
-    backgroundColor: '#fff', // Белый фон кнопки
+    backgroundColor: colors.primary,
     padding: 16,
-    borderRadius: 10,
+    borderRadius: themeConfig.borderRadius.md,
     alignItems: 'center',
-    marginTop: 10,
-    marginBottom: 20,
+    marginTop: spacing.md,
+    marginBottom: spacing.lg,
   },
   buttonDisabled: {
     opacity: 0.6,
-    backgroundColor: '#666', // Серый для disabled
+    backgroundColor: colors.textTertiary,
   },
   buttonText: {
-    color: '#000', // Черный текст на кнопке
+    color: colors.textLight,
     fontSize: 18,
     fontWeight: '600',
   },
   requiredText: {
-    color: '#fff', // Белый текст
+    color: colors.textSecondary,
     fontSize: 12,
     marginTop: -10,
-    marginBottom: 15,
+    marginBottom: spacing.md,
     textAlign: 'center',
   },
   loginLink: {
-    marginTop: 10,
+    marginTop: spacing.sm,
     alignItems: 'center',
-    padding: 10,
+    padding: spacing.sm,
   },
   loginLinkText: {
-    color: '#fff', // Белый текст
+    color: colors.text,
     fontSize: 16,
   },
   loginLinkBold: {
-    color: '#fff', // Белый текст вместо синего
+    color: colors.primary,
     fontWeight: '600',
     textDecorationLine: 'underline',
   },

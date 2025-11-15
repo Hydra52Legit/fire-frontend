@@ -152,8 +152,11 @@ class AuthService {
         }
         return { user: null, needsPin: false };
       }
-    } catch (error) {
-      console.error('Auth check error:', error);
+    } catch (error: any) {
+      // Не логируем ошибки сети в продакшене
+      if (__DEV__) {
+        console.error('Auth check error:', error);
+      }
       return { user: null, needsPin: false };
     }
   }

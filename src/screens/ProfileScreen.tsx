@@ -90,6 +90,18 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Быстрые действия</Text>
+        
+        <TouchableOpacity 
+          style={styles.adminButton}
+          onPress={() => navigation.navigate('NotificationCenter' as any)}
+        >
+          <Ionicons name="notifications" size={20} color="#007AFF" />
+          <Text style={styles.adminButtonText}>Центр уведомлений</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.section}>
         <Text style={styles.sectionTitle}>Статистика</Text>
         
         <View style={styles.statsRow}>
@@ -113,19 +125,36 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Административные функции</Text>
           
-          <TouchableOpacity style={styles.adminButton}>
-            <Ionicons name="people" size={20} color="#007AFF" />
-            <Text style={styles.adminButtonText}>Управление пользователями</Text>
+          <TouchableOpacity 
+            style={styles.adminButton}
+            onPress={() => navigation.navigate('AdminPanel' as any)}
+          >
+            <Ionicons name="shield" size={20} color="#007AFF" />
+            <Text style={styles.adminButtonText}>Панель администратора</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.adminButton}>
-            <Ionicons name="settings" size={20} color="#007AFF" />
-            <Text style={styles.adminButtonText}>Настройки системы</Text>
+          <TouchableOpacity 
+            style={styles.adminButton}
+            onPress={() => navigation.navigate('Dashboard' as any)}
+          >
+            <Ionicons name="analytics" size={20} color="#007AFF" />
+            <Text style={styles.adminButtonText}>Аналитика и отчеты</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity style={styles.adminButton}>
+          
+          <TouchableOpacity 
+            style={styles.adminButton}
+            onPress={() => navigation.navigate('Reports' as any)}
+          >
             <Ionicons name="document-text" size={20} color="#007AFF" />
-            <Text style={styles.adminButtonText}>Отчеты и статистика</Text>
+            <Text style={styles.adminButtonText}>Отчеты</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.adminButton}
+            onPress={() => navigation.navigate('AutomationSettings' as any)}
+          >
+            <Ionicons name="settings" size={20} color="#007AFF" />
+            <Text style={styles.adminButtonText}>Автоматизация</Text>
           </TouchableOpacity>
         </View>
       )}

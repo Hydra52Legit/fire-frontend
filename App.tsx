@@ -1,4 +1,4 @@
-import React from 'react';
+    import React from 'react';
 import { View, ActivityIndicator, Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -6,6 +6,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import HomeScreen from './src/screens/HomeScreen';
@@ -18,8 +19,12 @@ import AddEditObjectScreen from './src/screens/AddEditObjectScreen';
 import FireSafetyScreen from './src/screens/FireSafetyScreen';
 import { NotificationProvider } from './src/contexts/NotificationContext';
 import NotificationSettingsScreen from './src/screens/NotificationSettingsScreen';
+import NotificationCenterScreen from './src/screens/NotificationCenterScreen';
+import AutomationSettingsScreen from './src/screens/AutomationSettingsScreen';
 import CreateInspectionScreen from './src/screens/CreateInspectionScreen';
 import ReportsScreen from './src/screens/ReportsScreen';
+import DashboardScreen from './src/screens/DashboardScreen';
+import AdminPanelScreen from './src/screens/AdminPanelScreen';
 import MapPickerScreen from './src/screens/MapPickerScreen';
 
 import ExtinguishersListScreen from './src/screens/ExtinguishersListScreen';
@@ -35,14 +40,16 @@ const Tab = createBottomTabNavigator<TabParamList>();
 
 // Таб-навигатор
 function TabNavigator() {
+  const { colors } = useTheme();
+  
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: '#fff',
-        tabBarInactiveTintColor: '#666',
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
-          backgroundColor: '#000',
-          borderTopColor: '#333',
+          backgroundColor: colors.background,
+          borderTopColor: colors.border,
         },
         headerShown: false,
       }}
@@ -83,12 +90,25 @@ function TabNavigator() {
 
 function AppContent() {
   const { user, isLoading } = useAuth();
+  const { colors } = useTheme();
+  
+  React.useEffect(() => {
+    // Запускаем автоматизацию при старте приложения
+    if (user) {
+      const automationService = require('./src/services/automationService').default;
+      automationService.startAutomation();
+      
+      return () => {
+        automationService.stopAutomation();
+      };
+    }
+  }, [user]);
   
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' }}>
-        <ActivityIndicator size="large" color="#fff" />
-        <Text style={{ color: '#fff', marginTop: 10 }}>Загрузка...</Text>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={{ color: colors.text, marginTop: 10 }}>Загрузка...</Text>
       </View>
     );
   }
@@ -114,7 +134,11 @@ function AppContent() {
             <Stack.Screen name="EquipmentList" component={EquipmentListScreen} />
             <Stack.Screen name="AddEditEquipment" component={AddEditEquipmentScreen} />
             <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
+            <Stack.Screen name="NotificationCenter" component={NotificationCenterScreen} />
+            <Stack.Screen name="AutomationSettings" component={AutomationSettingsScreen} />
             <Stack.Screen name="Reports" component={ReportsScreen} />
+            <Stack.Screen name="Dashboard" component={DashboardScreen} />
+            <Stack.Screen name="AdminPanel" component={AdminPanelScreen} />
             <Stack.Screen name="CreateInspection" component={CreateInspectionScreen} />
             <Stack.Screen name="MapPicker" component={MapPickerScreen} />
             <Stack.Screen name="PinCode" component={PinCodeScreen} />
@@ -133,10 +157,12 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <NotificationProvider>
-        <AppContent />
-      </NotificationProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <NotificationProvider>
+          <AppContent />
+        </NotificationProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

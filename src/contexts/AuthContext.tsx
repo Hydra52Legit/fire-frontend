@@ -30,9 +30,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const { user: currentUser } = await AuthService.checkAuth();
       setUser(currentUser);
-    } catch (error) {
-      console.error('Auth check error:', error);
-      setUser(null);
+    } catch (error: any) {
+      // Не логируем ошибки сети в продакшене
+      if (__DEV__) {
+        console.error('Auth check error:', error);
+      }
+      // Если ошибка сети или таймаут, не очищаем пользователя из локального хранилища
+      if (error?.status === 0 || error?.status === 408) {
+        // Пытаемся использовать сохраненного пользователя
+        const savedUser = await AuthService.getCurrentUser();
+        if (savedUser) {
+          setUser(savedUser);
+        } else {
+          setUser(null);
+        }
+      } else {
+        setUser(null);
+      }
     } finally {
       setIsLoading(false);
     }
