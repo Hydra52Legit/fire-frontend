@@ -42,6 +42,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const userData = await AuthService.login(email, password);
       setUser(userData);
+      // После успешного входа проверяем, нужен ли PIN-код
+      const { needsPin } = await AuthService.checkAuth();
+      // Если нужен PIN, можно добавить навигацию на экран PIN-кода
+      // Пока оставляем как есть - пользователь попадает на главный экран
     } catch (error) {
       throw error;
     }
@@ -51,6 +55,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const newUser = await AuthService.register(userData);
       setUser(newUser);
+      // После регистрации пользователь автоматически авторизован
     } catch (error) {
       throw error;
     }

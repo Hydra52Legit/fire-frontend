@@ -96,10 +96,6 @@ export default function LoginScreen() {
             Нет аккаунта? <Text style={styles.registerLinkBold}>Зарегистрироваться</Text>
           </Text>
         </TouchableOpacity>
-
-        <Text style={styles.demoText}>
-          Для демо используйте: admin@fireinspection.ru / любой пароль
-        </Text>
       </View>
     </KeyboardAvoidingView>
   );
@@ -170,11 +166,5 @@ const styles = StyleSheet.create({
     color: '#fff', // Белый текст вместо синего
     fontWeight: '600',
     textDecorationLine: 'underline',
-  },
-  demoText: {
-    textAlign: 'center',
-    marginTop: 20,
-    color: '#fff', // Белый текст
-    fontSize: 14,
   },
 });

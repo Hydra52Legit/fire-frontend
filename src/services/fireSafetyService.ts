@@ -4,118 +4,153 @@ import {
   FireEquipment, 
   FireSafetyStats, 
   EquipmentStatus,
-  ExtinguisherType, // ДОБАВЛЕНО
-  FireEquipmentType // ДОБАВЛЕНО
+  ExtinguisherType,
+  FireEquipmentType
 } from '../types';
+import apiClient from './apiClient';
+import API_CONFIG from '../config/api.config';
 
 const STORAGE_KEYS = {
-  FIRE_EXTINGUISHERS: 'fire_inspection_extinguishers',
   FIRE_EQUIPMENT: 'fire_inspection_equipment',
 };
+
+// Преобразование огнетушителя из формата бэкенда в формат frontend
+function transformExtinguisherFromBackend(obj: any): FireExtinguisher {
+  return {
+    id: obj.id,
+    inventoryNumber: obj.inventoryNumber,
+    type: obj.type,
+    capacity: obj.capacity,
+    location: obj.location,
+    objectId: obj.objectId,
+    lastServiceDate: typeof obj.lastServiceDate === 'string' 
+      ? obj.lastServiceDate 
+      : new Date(obj.lastServiceDate).toISOString().split('T')[0],
+    nextServiceDate: typeof obj.nextServiceDate === 'string'
+      ? obj.nextServiceDate
+      : new Date(obj.nextServiceDate).toISOString().split('T')[0],
+    status: obj.status,
+    manufacturer: obj.manufacturer,
+    manufactureDate: obj.manufactureDate 
+      ? (typeof obj.manufactureDate === 'string'
+          ? obj.manufactureDate
+          : new Date(obj.manufactureDate).toISOString().split('T')[0])
+      : undefined,
+    comments: obj.comments,
+    createdAt: typeof obj.createdAt === 'string' ? obj.createdAt : obj.createdAt.toISOString(),
+    updatedAt: typeof obj.updatedAt === 'string' ? obj.updatedAt : obj.updatedAt.toISOString(),
+  };
+}
+
+// Преобразование огнетушителя из формата frontend в формат бэкенда
+function transformExtinguisherToBackend(obj: Partial<FireExtinguisher>): any {
+  const result: any = {};
+
+  if (obj.objectId !== undefined) result.objectId = obj.objectId;
+  if (obj.inventoryNumber !== undefined) result.inventoryNumber = obj.inventoryNumber;
+  if (obj.type !== undefined) result.type = obj.type;
+  if (obj.capacity !== undefined) result.capacity = obj.capacity;
+  if (obj.location !== undefined) result.location = obj.location;
+  if (obj.lastServiceDate !== undefined) {
+    result.lastServiceDate = new Date(obj.lastServiceDate);
+  }
+  if (obj.nextServiceDate !== undefined) {
+    result.nextServiceDate = new Date(obj.nextServiceDate);
+  }
+  if (obj.status !== undefined) result.status = obj.status;
+  if (obj.manufacturer !== undefined) result.manufacturer = obj.manufacturer;
+  if (obj.manufactureDate !== undefined) {
+    result.manufactureDate = new Date(obj.manufactureDate);
+  }
+  if (obj.comments !== undefined) result.comments = obj.comments;
+
+  return result;
+}
 
 class FireSafetyService {
   // ===== ОГНЕТУШИТЕЛИ =====
 
-  // Получение всех огнетушителей
-  async getFireExtinguishers(): Promise<FireExtinguisher[]> {
-    try {
-      const extinguishersJson = await AsyncStorage.getItem(STORAGE_KEYS.FIRE_EXTINGUISHERS);
-      if (extinguishersJson) {
-        return JSON.parse(extinguishersJson);
-      }
-
-      // Создаем тестовые данные
-      const sampleExtinguishers: FireExtinguisher[] = [
-        {
-          id: '1',
-          inventoryNumber: 'ОГН-2024-001',
-          type: 'powder',
-          capacity: 5,
-          location: 'Холл 1 этаж, возле лифта',
-          objectId: '1',
-          lastServiceDate: '2024-01-15',
-          nextServiceDate: '2024-07-15',
-          status: 'active',
-          manufacturer: 'Ярпожинвест',
-          manufactureDate: '2023-06-10',
-          comments: 'В отличном состоянии',
-          createdAt: '2024-01-15',
-          updatedAt: '2024-01-15',
-        },
-        {
-          id: '2',
-          inventoryNumber: 'ОГН-2024-002',
-          type: 'co2',
-          capacity: 3,
-          location: 'Серверная, на стене',
-          objectId: '1',
-          lastServiceDate: '2023-12-20',
-          nextServiceDate: '2024-06-20',
-          status: 'active',
-          manufacturer: 'Брандбург',
-          manufactureDate: '2023-05-15',
-          comments: 'Требуется замена пломбы',
-          createdAt: '2024-01-15',
-          updatedAt: '2024-01-15',
-        },
-        {
-          id: '3',
-          inventoryNumber: 'ОГН-2024-003',
-          type: 'powder',
-          capacity: 10,
-          location: 'Складской комплекс, зона Б',
-          objectId: '2',
-          lastServiceDate: '2022-11-10',
-          nextServiceDate: '2023-11-10',
-          status: 'expired',
-          manufacturer: 'Пожарный щит',
-          manufactureDate: '2022-01-20',
-          comments: 'ПРОСРОЧЕН - снять с учета',
-          createdAt: '2024-01-15',
-          updatedAt: '2024-01-15',
-        },
-      ];
-
-      await this.saveFireExtinguishers(sampleExtinguishers);
-      return sampleExtinguishers;
-    } catch (error) {
-      console.error('Error getting fire extinguishers:', error);
-      return [];
-    }
-  }
-
-  // Получение огнетушителей по объекту
+  // Получение огнетушителей по объекту (бэкенд поддерживает только получение по объекту)
   async getExtinguishersByObject(objectId: string): Promise<FireExtinguisher[]> {
     try {
-      const extinguishers = await this.getFireExtinguishers();
-      return extinguishers.filter(ext => ext.objectId === objectId);
+      const extinguishers = await apiClient.get<any[]>(
+        API_CONFIG.ENDPOINTS.EXTINGUISHERS.GET_BY_OBJECT(objectId)
+      );
+      return extinguishers.map(transformExtinguisherFromBackend);
     } catch (error) {
       console.error('Error getting extinguishers by object:', error);
       return [];
     }
   }
 
-  // Сохранение огнетушителя
-  async saveFireExtinguisher(extinguisher: FireExtinguisher): Promise<void> {
+  // Получение всех огнетушителей (получаем по всем объектам)
+  // ВАЖНО: Это неэффективно, лучше использовать getExtinguishersByObject
+  async getFireExtinguishers(): Promise<FireExtinguisher[]> {
     try {
-      const extinguishers = await this.getFireExtinguishers();
-      const existingIndex = extinguishers.findIndex(ext => ext.id === extinguisher.id);
-      
-      if (existingIndex >= 0) {
-        extinguishers[existingIndex] = {
-          ...extinguisher,
-          updatedAt: new Date().toISOString(),
-        };
-      } else {
-        extinguishers.push({
-          ...extinguisher,
-          id: extinguisher.id || Date.now().toString(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
+      // Получаем все объекты и затем все огнетушители для каждого объекта
+      // Это не оптимально, но бэкенд не имеет эндпоинта для получения всех огнетушителей
+      const objectService = (await import('./objectService')).default;
+      const objects = await objectService.getObjects();
+      const allExtinguishers: FireExtinguisher[] = [];
+
+      for (const obj of objects) {
+        const extinguishers = await this.getExtinguishersByObject(obj.id);
+        allExtinguishers.push(...extinguishers);
       }
 
-      await this.saveFireExtinguishers(extinguishers);
+      return allExtinguishers;
+    } catch (error) {
+      console.error('Error getting fire extinguishers:', error);
+      return [];
+    }
+  }
+
+  // Получение огнетушителя по ID
+  async getExtinguisherById(id: string): Promise<FireExtinguisher | null> {
+    try {
+      const extinguisher = await apiClient.get<any>(API_CONFIG.ENDPOINTS.EXTINGUISHERS.GET(id));
+      return transformExtinguisherFromBackend(extinguisher);
+    } catch (error: any) {
+      if (error.status === 404) {
+        return null;
+      }
+      console.error('Error getting extinguisher by id:', error);
+      throw error;
+    }
+  }
+
+  // Создание огнетушителя
+  async createExtinguisher(extinguisher: Partial<FireExtinguisher>): Promise<FireExtinguisher> {
+    try {
+      const data = transformExtinguisherToBackend(extinguisher);
+      const created = await apiClient.post<any>(API_CONFIG.ENDPOINTS.EXTINGUISHERS.CREATE, data);
+      return transformExtinguisherFromBackend(created);
+    } catch (error) {
+      console.error('Error creating fire extinguisher:', error);
+      throw error;
+    }
+  }
+
+  // Обновление огнетушителя
+  async updateExtinguisher(id: string, extinguisher: Partial<FireExtinguisher>): Promise<FireExtinguisher> {
+    try {
+      const data = transformExtinguisherToBackend(extinguisher);
+      const updated = await apiClient.put<any>(API_CONFIG.ENDPOINTS.EXTINGUISHERS.UPDATE(id), data);
+      return transformExtinguisherFromBackend(updated);
+    } catch (error) {
+      console.error('Error updating fire extinguisher:', error);
+      throw error;
+    }
+  }
+
+  // Сохранение огнетушителя (создание или обновление)
+  async saveFireExtinguisher(extinguisher: FireExtinguisher): Promise<FireExtinguisher> {
+    try {
+      if (extinguisher.id) {
+        return await this.updateExtinguisher(extinguisher.id, extinguisher);
+      } else {
+        return await this.createExtinguisher(extinguisher);
+      }
     } catch (error) {
       console.error('Error saving fire extinguisher:', error);
       throw error;
@@ -125,9 +160,7 @@ class FireSafetyService {
   // Удаление огнетушителя
   async deleteFireExtinguisher(extinguisherId: string): Promise<void> {
     try {
-      const extinguishers = await this.getFireExtinguishers();
-      const filteredExtinguishers = extinguishers.filter(ext => ext.id !== extinguisherId);
-      await this.saveFireExtinguishers(filteredExtinguishers);
+      await apiClient.delete(API_CONFIG.ENDPOINTS.EXTINGUISHERS.DELETE(extinguisherId));
     } catch (error) {
       console.error('Error deleting fire extinguisher:', error);
       throw error;
@@ -336,10 +369,6 @@ class FireSafetyService {
   }
 
   // ===== ПРИВАТНЫЕ МЕТОДЫ =====
-
-  private async saveFireExtinguishers(extinguishers: FireExtinguisher[]): Promise<void> {
-    await AsyncStorage.setItem(STORAGE_KEYS.FIRE_EXTINGUISHERS, JSON.stringify(extinguishers));
-  }
 
   private async saveFireEquipmentList(equipment: FireEquipment[]): Promise<void> {
     await AsyncStorage.setItem(STORAGE_KEYS.FIRE_EQUIPMENT, JSON.stringify(equipment));

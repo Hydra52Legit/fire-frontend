@@ -326,7 +326,7 @@ export default function HomeScreen() {
         
         <TouchableOpacity 
           style={styles.statItem}
-          onPress={() => navigation.navigate('ObjectsList')}
+          onPress={() => navigation.navigate("ObjectsList")}
         >
           <Ionicons name="business" size={24} color="#45B7D1" />
           <Text style={styles.statNumber}>{objects.length}</Text>
