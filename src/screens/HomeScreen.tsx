@@ -265,7 +265,7 @@ export default function HomeScreen() {
     title: 'Отчеты и нарушения',
     description: 'Просмотр нарушений и статистики',
     icon: 'document-text',
-    screen: 'Report',
+    screen: 'Reports',
     adminOnly: false,
     color: '#9B5DE5'
   },
@@ -531,35 +531,31 @@ export default function HomeScreen() {
               style={styles.modulesList}
               showsVerticalScrollIndicator={false}
             >
-              {MODULES.map((module) => {
-                // Показываем только доступные модули для роли пользователя
-                if (module.adminOnly && user?.role !== 'admin') {
-                  return null;
-                }
-                
-                return (
-                  <TouchableOpacity
-                    key={module.id}
-                    style={styles.moduleItem}
-                    onPress={() => handleModulePress(module)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.moduleIcon, { backgroundColor: module.color + '20' }]}>
-                      <Ionicons name={module.icon as any} size={24} color={module.color} />
-                    </View>
-                    <View style={styles.moduleInfo}>
-                      <Text style={styles.moduleTitle}>{module.title}</Text>
-                      <Text style={styles.moduleDescription}>{module.description}</Text>
-                      {module.adminOnly && (
-                        <View style={styles.adminBadge}>
-                          <Text style={styles.adminBadgeText}>Только для администраторов</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color="#666" />
-                  </TouchableOpacity>
-                );
-              })}
+              {MODULES.filter((module) => {
+                // Фильтруем модули по правам доступа
+                return !(module.adminOnly && user?.role !== 'admin');
+              }).map((module) => (
+                <TouchableOpacity
+                  key={module.id}
+                  style={styles.moduleItem}
+                  onPress={() => handleModulePress(module)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.moduleIcon, { backgroundColor: module.color + '20' }]}>
+                    <Ionicons name={module.icon as any} size={24} color={module.color} />
+                  </View>
+                  <View style={styles.moduleInfo}>
+                    <Text style={styles.moduleTitle}>{module.title}</Text>
+                    <Text style={styles.moduleDescription}>{module.description}</Text>
+                    {module.adminOnly && (
+                      <View style={styles.adminBadge}>
+                        <Text style={styles.adminBadgeText}>Только для администраторов</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#666" />
+                </TouchableOpacity>
+              ))}
             </ScrollView>
           </View>
         </View>

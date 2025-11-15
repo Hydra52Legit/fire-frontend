@@ -37,7 +37,7 @@ export default function LoginScreen() {
     try {
       await login(email, password);
       // После успешного логина автоматически переходим на Tabs через Context
-      // PIN-код временно отключен для упрощения
+      // TODO: PIN-код временно отключен для упрощения - будет реализован позже
     } catch (error) {
       Alert.alert('Ошибка', 'Не удалось войти в систему. Проверьте email и пароль.');
     } finally {

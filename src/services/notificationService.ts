@@ -399,7 +399,9 @@ class NotificationService {
     return typeInfo?.label || type;
   }
 
-  // Отправка email уведомлений (заглушка - нужно интегрировать с email сервисом)
+  // Отправка email уведомлений
+  // TODO: Интегрировать с email сервисом (SendGrid, Mailgun, etc.) или API бэкенда
+  // Временная заглушка для отображения фронта - функция будет реализована позже
   async sendEmailNotification(to: string, subject: string, body: string): Promise<void> {
     // TODO: Интеграция с email сервисом (SendGrid, Mailgun, etc.)
     console.log(`Email отправлен на ${to}: ${subject}`);

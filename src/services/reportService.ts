@@ -13,6 +13,8 @@ import {
 import DataService from './dataService';
 import FireSafetyService from './fireSafetyService';
 
+// TODO: После реализации API для inspections и violations в бэкенде, заменить AsyncStorage на API вызовы
+// Временное решение для отображения фронта - данные хранятся локально
 const STORAGE_KEYS = {
   VIOLATIONS: 'fire_inspection_violations',
   INSPECTION_REPORTS: 'fire_inspection_reports',
@@ -21,6 +23,8 @@ const STORAGE_KEYS = {
 
 class ReportService {
   // ===== НАРУШЕНИЯ =====
+  // TODO: Интегрировать с API /api/inspections/violations после реализации в бэкенде
+  // Временное решение - данные хранятся локально в AsyncStorage
 
   async getViolations(): Promise<Violation[]> {
     try {
@@ -59,6 +63,8 @@ class ReportService {
   }
 
   // ===== АКТЫ ПРОВЕРОК =====
+  // TODO: Интегрировать с API /api/inspections после реализации в бэкенде
+  // Временное решение - данные хранятся локально в AsyncStorage
 
   async getInspectionReports(): Promise<InspectionReport[]> {
     try {
@@ -232,6 +238,8 @@ class ReportService {
   }
 
   // ===== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ =====
+  // TODO: После реализации API для отчетов в бэкенде, заменить AsyncStorage на API вызовы
+  // Временное решение - сгенерированные отчеты хранятся локально
 
   async getGeneratedReports(): Promise<ReportData[]> {
     try {
