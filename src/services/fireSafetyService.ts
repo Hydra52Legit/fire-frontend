@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { 
   FireExtinguisher, 
   FireEquipment, 
@@ -9,10 +8,6 @@ import {
 } from '../types';
 import apiClient from './apiClient';
 import API_CONFIG from '../config/api.config';
-
-const STORAGE_KEYS = {
-  FIRE_EQUIPMENT: 'fire_inspection_equipment',
-};
 
 // Преобразование огнетушителя из формата бэкенда в формат frontend
 function transformExtinguisherFromBackend(obj: any): FireExtinguisher {
@@ -61,6 +56,59 @@ function transformExtinguisherToBackend(obj: Partial<FireExtinguisher>): any {
   if (obj.manufacturer !== undefined) result.manufacturer = obj.manufacturer;
   if (obj.manufactureDate !== undefined) {
     result.manufactureDate = new Date(obj.manufactureDate);
+  }
+  if (obj.comments !== undefined) result.comments = obj.comments;
+
+  return result;
+}
+
+// Преобразование оборудования из формата бэкенда в формат frontend
+function transformEquipmentFromBackend(obj: any): FireEquipment {
+  return {
+    id: obj.id,
+    type: obj.type,
+    inventoryNumber: obj.inventoryNumber,
+    location: obj.location,
+    objectId: obj.objectId,
+    lastInspectionDate: typeof obj.lastInspectionDate === 'string'
+      ? obj.lastInspectionDate
+      : new Date(obj.lastInspectionDate).toISOString().split('T')[0],
+    nextInspectionDate: typeof obj.nextInspectionDate === 'string'
+      ? obj.nextInspectionDate
+      : new Date(obj.nextInspectionDate).toISOString().split('T')[0],
+    status: obj.status,
+    specifications: {
+      pressure: obj.pressure,
+      diameter: obj.diameter,
+      length: obj.length,
+      material: obj.material,
+    },
+    comments: obj.comments,
+    createdAt: typeof obj.createdAt === 'string' ? obj.createdAt : obj.createdAt.toISOString(),
+    updatedAt: typeof obj.updatedAt === 'string' ? obj.updatedAt : obj.updatedAt.toISOString(),
+  };
+}
+
+// Преобразование оборудования из формата frontend в формат бэкенда
+function transformEquipmentToBackend(obj: Partial<FireEquipment>): any {
+  const result: any = {};
+
+  if (obj.objectId !== undefined) result.objectId = obj.objectId;
+  if (obj.type !== undefined) result.type = obj.type;
+  if (obj.inventoryNumber !== undefined) result.inventoryNumber = obj.inventoryNumber;
+  if (obj.location !== undefined) result.location = obj.location;
+  if (obj.lastInspectionDate !== undefined) {
+    result.lastInspectionDate = new Date(obj.lastInspectionDate);
+  }
+  if (obj.nextInspectionDate !== undefined) {
+    result.nextInspectionDate = new Date(obj.nextInspectionDate);
+  }
+  if (obj.status !== undefined) result.status = obj.status;
+  if (obj.specifications) {
+    if (obj.specifications.pressure !== undefined) result.pressure = obj.specifications.pressure;
+    if (obj.specifications.diameter !== undefined) result.diameter = obj.specifications.diameter;
+    if (obj.specifications.length !== undefined) result.length = obj.specifications.length;
+    if (obj.specifications.material !== undefined) result.material = obj.specifications.material;
   }
   if (obj.comments !== undefined) result.comments = obj.comments;
 
@@ -169,108 +217,86 @@ class FireSafetyService {
 
   // ===== ПОЖАРНОЕ ОБОРУДОВАНИЕ =====
 
-  // Получение всего оборудования
-  async getFireEquipment(): Promise<FireEquipment[]> {
-    try {
-      const equipmentJson = await AsyncStorage.getItem(STORAGE_KEYS.FIRE_EQUIPMENT);
-      if (equipmentJson) {
-        return JSON.parse(equipmentJson);
-      }
-
-      // Создаем тестовые данные
-      const sampleEquipment: FireEquipment[] = [
-        {
-          id: '1',
-          type: 'fire_hydrant',
-          inventoryNumber: 'ГИД-2024-001',
-          location: 'Холл 1 этаж, правая стена',
-          objectId: '1',
-          lastInspectionDate: '2024-01-10',
-          nextInspectionDate: '2024-07-10',
-          status: 'active',
-          specifications: {
-            pressure: 4.5,
-            diameter: 50,
-          },
-          comments: 'Рабочее состояние',
-          createdAt: '2024-01-15',
-          updatedAt: '2024-01-15',
-        },
-        {
-          id: '2',
-          type: 'fire_shield',
-          location: 'Складская зона, вход',
-          objectId: '2',
-          lastInspectionDate: '2023-12-15',
-          nextInspectionDate: '2024-06-15',
-          status: 'active',
-          specifications: {
-            material: 'металл',
-          },
-          comments: 'Полный комплект',
-          createdAt: '2024-01-15',
-          updatedAt: '2024-01-15',
-        },
-        {
-          id: '3',
-          type: 'fire_hose',
-          inventoryNumber: 'РУК-2024-001',
-          location: 'Помещение охраны',
-          objectId: '1',
-          lastInspectionDate: '2022-08-20',
-          nextInspectionDate: '2023-08-20',
-          status: 'expired',
-          specifications: {
-            length: 20,
-            diameter: 51,
-          },
-          comments: 'Требуется замена',
-          createdAt: '2024-01-15',
-          updatedAt: '2024-01-15',
-        },
-      ];
-
-      // ИСПРАВЛЕНО: передаем массив, а не один элемент
-      await this.saveFireEquipmentList(sampleEquipment);
-      return sampleEquipment;
-    } catch (error) {
-      console.error('Error getting fire equipment:', error);
-      return [];
-    }
-  }
-
-  // Получение оборудования по объекту
+  // Получение оборудования по объекту (бэкенд поддерживает только получение по объекту)
   async getEquipmentByObject(objectId: string): Promise<FireEquipment[]> {
     try {
-      const equipment = await this.getFireEquipment();
-      return equipment.filter(eq => eq.objectId === objectId);
+      const equipment = await apiClient.get<any[]>(
+        API_CONFIG.ENDPOINTS.EQUIPMENT.GET_BY_OBJECT(objectId)
+      );
+      return equipment.map(transformEquipmentFromBackend);
     } catch (error) {
       console.error('Error getting equipment by object:', error);
       return [];
     }
   }
 
-  // Сохранение оборудования
-  async saveFireEquipment(equipment: FireEquipment): Promise<void> {
+  // Получение всего оборудования (получаем по всем объектам)
+  // ВАЖНО: Это неэффективно, лучше использовать getEquipmentByObject
+  async getFireEquipment(): Promise<FireEquipment[]> {
     try {
-      const allEquipment = await this.getFireEquipment();
-      const existingIndex = allEquipment.findIndex(eq => eq.id === equipment.id);
-      
-      if (existingIndex >= 0) {
-        allEquipment[existingIndex] = {
-          ...equipment,
-          updatedAt: new Date().toISOString(),
-        };
-      } else {
-        allEquipment.push({
-          ...equipment,
-          id: equipment.id || Date.now().toString(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
+      // Получаем все объекты и затем все оборудование для каждого объекта
+      const objectService = (await import('./objectService')).default;
+      const objects = await objectService.getObjects();
+      const allEquipment: FireEquipment[] = [];
+
+      for (const obj of objects) {
+        const equipment = await this.getEquipmentByObject(obj.id);
+        allEquipment.push(...equipment);
       }
 
-      await this.saveFireEquipmentList(allEquipment);
+      return allEquipment;
+    } catch (error) {
+      console.error('Error getting fire equipment:', error);
+      return [];
+    }
+  }
+
+  // Получение оборудования по ID
+  async getEquipmentById(id: string): Promise<FireEquipment | null> {
+    try {
+      const equipment = await apiClient.get<any>(API_CONFIG.ENDPOINTS.EQUIPMENT.GET(id));
+      return transformEquipmentFromBackend(equipment);
+    } catch (error: any) {
+      if (error.status === 404) {
+        return null;
+      }
+      console.error('Error getting equipment by id:', error);
+      throw error;
+    }
+  }
+
+  // Создание оборудования
+  async createEquipment(equipment: Partial<FireEquipment>): Promise<FireEquipment> {
+    try {
+      const data = transformEquipmentToBackend(equipment);
+      const created = await apiClient.post<any>(API_CONFIG.ENDPOINTS.EQUIPMENT.CREATE, data);
+      return transformEquipmentFromBackend(created);
+    } catch (error) {
+      console.error('Error creating fire equipment:', error);
+      throw error;
+    }
+  }
+
+  // Обновление оборудования
+  async updateEquipment(id: string, equipment: Partial<FireEquipment>): Promise<FireEquipment> {
+    try {
+      const data = transformEquipmentToBackend(equipment);
+      const updated = await apiClient.put<any>(API_CONFIG.ENDPOINTS.EQUIPMENT.UPDATE(id), data);
+      return transformEquipmentFromBackend(updated);
+    } catch (error) {
+      console.error('Error updating fire equipment:', error);
+      throw error;
+    }
+  }
+
+  // Сохранение оборудования (создание или обновление)
+  async saveFireEquipment(equipment: FireEquipment): Promise<FireEquipment> {
+    try {
+      if (equipment.id) {
+        return await this.updateEquipment(equipment.id, equipment);
+      } else {
+        return await this.createEquipment(equipment);
+      }
     } catch (error) {
       console.error('Error saving fire equipment:', error);
       throw error;
@@ -280,9 +306,7 @@ class FireSafetyService {
   // Удаление оборудования
   async deleteFireEquipment(equipmentId: string): Promise<void> {
     try {
-      const equipment = await this.getFireEquipment();
-      const filteredEquipment = equipment.filter(eq => eq.id !== equipmentId);
-      await this.saveFireEquipmentList(filteredEquipment);
+      await apiClient.delete(API_CONFIG.ENDPOINTS.EQUIPMENT.DELETE(equipmentId));
     } catch (error) {
       console.error('Error deleting fire equipment:', error);
       throw error;
@@ -368,11 +392,6 @@ class FireSafetyService {
     ];
   }
 
-  // ===== ПРИВАТНЫЕ МЕТОДЫ =====
-
-  private async saveFireEquipmentList(equipment: FireEquipment[]): Promise<void> {
-    await AsyncStorage.setItem(STORAGE_KEYS.FIRE_EQUIPMENT, JSON.stringify(equipment));
-  }
 }
 
 export default new FireSafetyService();

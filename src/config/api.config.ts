@@ -52,6 +52,14 @@ const API_CONFIG = {
       UPDATE: (id: string) => `/extinguishers/${id}`,
       DELETE: (id: string) => `/extinguishers/${id}`,
     },
+    EQUIPMENT: {
+      LIST: '/equipment',
+      GET: (id: string) => `/equipment/${id}`,
+      GET_BY_OBJECT: (objectId: string) => `/equipment/objects/${objectId}`,
+      CREATE: '/equipment',
+      UPDATE: (id: string) => `/equipment/${id}`,
+      DELETE: (id: string) => `/equipment/${id}`,
+    },
     NOTIFICATIONS: {
       REGISTER_TOKEN: '/notifications/register-token',
       UNREGISTER_TOKEN: '/notifications/unregister-token',
