@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, TextInput, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing, theme } from '../../theme';
 
 interface SearchInputProps {
   value: string;
@@ -42,22 +43,22 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8F8F8',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    marginBottom: 16,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: theme.borderRadius.md,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.lg,
   },
   icon: {
-    marginRight: 8,
+    marginRight: spacing.sm,
   },
   input: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: spacing.md,
     fontSize: 16,
-    color: '#000000',
+    color: colors.text,
   },
   clearIcon: {
-    marginLeft: 8,
+    marginLeft: spacing.sm,
   },
 });
 

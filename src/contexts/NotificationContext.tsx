@@ -40,9 +40,24 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
         // ИСПРАВЛЕНО: Добавлен await
         const savedPreferences = await NotificationService.getPreferences();
         setPreferences(savedPreferences);
+      } else {
+        // В Expo Go просто загружаем настройки без инициализации
+        const savedPreferences = await NotificationService.getPreferences();
+        setPreferences(savedPreferences);
       }
-    } catch (error) {
-      console.error('Ошибка инициализации уведомлений:', error);
+    } catch (error: any) {
+      // Игнорируем ошибки Expo Go - они не критичны
+      if (!error?.message?.includes('Expo Go') && !error?.message?.includes('development build')) {
+        // Только логируем реальные ошибки
+        console.error('Ошибка инициализации уведомлений:', error);
+      }
+      // Все равно загружаем настройки
+      try {
+        const savedPreferences = await NotificationService.getPreferences();
+        setPreferences(savedPreferences);
+      } catch (e) {
+        // Игнорируем ошибки загрузки настроек
+      }
     }
   };
 

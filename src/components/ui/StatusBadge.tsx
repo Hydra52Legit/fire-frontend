@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { colors } from '../../theme';
 
 interface StatusBadgeProps {
   status: string;
@@ -12,21 +13,21 @@ const getStatusColor = (status: string): string => {
     case 'active':
     case 'passed':
     case 'В порядке':
-      return '#34C759';
+      return colors.success;
     case 'maintenance':
     case 'in_progress':
     case 'requires_improvement':
-      return '#007AFF';
+      return colors.maintenance;
     case 'expired':
     case 'failed':
     case 'Проблемы':
-      return '#FF3B30';
+      return colors.error;
     case 'decommissioned':
     case 'cancelled':
     case 'Нет проверок':
-      return '#8E8E93';
+      return colors.decommissioned;
     default:
-      return '#8E8E93';
+      return colors.decommissioned;
   }
 };
 
@@ -67,7 +68,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   text: {
-    color: '#FFFFFF',
+    color: colors.textLight,
     fontSize: 12,
     fontWeight: '600',
   },

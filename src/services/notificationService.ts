@@ -11,10 +11,25 @@ import { FireExtinguisher, FireEquipment, InspectionObject } from '../types';
 let isExpoGo = false;
 try {
   const Constants = require('expo-constants');
-  isExpoGo = Constants?.executionEnvironment === 'storeClient' || Constants?.executionEnvironment === 'standalone';
+  // Правильная проверка Expo Go в SDK 53+
+  isExpoGo = Constants?.executionEnvironment === 'storeClient';
 } catch (e) {
   // Если expo-constants недоступен, предполагаем, что это не Expo Go
   isExpoGo = false;
+}
+
+// Дополнительная проверка через __DEV__ и наличие expo-modules
+if (__DEV__) {
+  try {
+    // Если в dev режиме и нет development build, это Expo Go
+    const Updates = require('expo-updates');
+    if (!Updates.isEmbeddedLaunch) {
+      isExpoGo = true;
+    }
+  } catch (e) {
+    // Если expo-updates недоступен, предполагаем Expo Go в dev режиме
+    isExpoGo = true;
+  }
 }
 
 // Типы уведомлений
@@ -57,47 +72,57 @@ class NotificationService {
   // Инициализация сервиса уведомлений
   async initialize(): Promise<boolean> {
     try {
-      // Отключаем push-уведомления в Expo Go (они не поддерживаются)
+      // Отключаем push-уведомления в Expo Go (они не поддерживаются в SDK 53+)
       if (isExpoGo) {
-        console.log('Push-уведомления отключены в Expo Go. Используйте development build для полной функциональности.');
+        // Не логируем ошибку, просто возвращаем false
+        this.isInitialized = false;
         return false;
       }
 
       if (!Device.isDevice) {
-        console.log('Уведомления работают только на реальных устройствах');
+        // Не логируем в dev режиме
+        this.isInitialized = false;
         return false;
       }
 
-      // Запрашиваем разрешения
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
+      // Запрашиваем разрешения (только если не Expo Go)
+      try {
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
 
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
+        if (existingStatus !== 'granted') {
+          const { status } = await Notifications.requestPermissionsAsync();
+          finalStatus = status;
+        }
+
+        if (finalStatus !== 'granted') {
+          this.isInitialized = false;
+          return false;
+        }
+
+        // ИСПРАВЛЕНО: Правильная настройка обработчика уведомлений
+        Notifications.setNotificationHandler({
+          handleNotification: async () => ({
+            shouldShowAlert: true,
+            shouldPlaySound: true,
+            shouldSetBadge: true,
+            shouldShowBanner: true,
+            shouldShowList: true,
+          }),
+          handleSuccess: () => {},
+          handleError: () => {},
+        });
+
+        this.isInitialized = true;
+        return true;
+      } catch (error: any) {
+        // Игнорируем ошибки в Expo Go
+        if (error?.message?.includes('Expo Go') || error?.message?.includes('development build')) {
+          this.isInitialized = false;
+          return false;
+        }
+        throw error;
       }
-
-      if (finalStatus !== 'granted') {
-        console.log('Разрешение на уведомления не получено');
-        return false;
-      }
-
-      // ИСПРАВЛЕНО: Правильная настройка обработчика уведомлений
-      Notifications.setNotificationHandler({
-        handleNotification: async () => ({
-          shouldShowAlert: true,
-          shouldPlaySound: true,
-          shouldSetBadge: true,
-          shouldShowBanner: true,
-          shouldShowList: true,
-        }),
-        handleSuccess: () => {},
-        handleError: () => {},
-      });
-
-      this.isInitialized = true;
-      console.log('Сервис уведомлений инициализирован');
-      return true;
     } catch (error: any) {
       // Проверяем, не связана ли ошибка с Expo Go
       if (error?.message?.includes('Expo Go') || error?.message?.includes('development build')) {

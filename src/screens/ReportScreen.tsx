@@ -17,7 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { RootStackParamList } from '../types/navigation';
 import { InspectionObject, Violation, ViolationType } from '../types'; // Убрал ViolationSeverity
-import DataService from '../services/dataService';
+import ObjectService from '../services/objectService';
 import ReportService from '../services/reportService';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -42,11 +42,17 @@ export default function CreateInspectionScreen() {
 
   const loadObject = async () => {
     try {
-      const objects = await DataService.getObjects();
-      const foundObject = objects.find(obj => obj.id === objectId);
-      setObject(foundObject || null);
+      // ✅ Исправлено: Загружаем только нужный объект, а не все
+      const foundObject = await ObjectService.getObjectById(objectId);
+      if (!foundObject) {
+        Alert.alert('Ошибка', 'Объект не найден');
+        navigation.goBack();
+        return;
+      }
+      setObject(foundObject);
     } catch (error) {
       Alert.alert('Ошибка', 'Не удалось загрузить объект');
+      navigation.goBack();
     }
   };
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing, typography, theme } from '../../theme';
 
 interface ActionButtonProps {
   onPress: () => void;
@@ -41,6 +42,17 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
     }
   };
 
+  const getIconColor = () => {
+    switch (variant) {
+      case 'primary':
+        return colors.textLight;
+      case 'danger':
+        return colors.error;
+      default:
+        return colors.text;
+    }
+  };
+
   return (
     <TouchableOpacity
       style={[
@@ -53,12 +65,12 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'primary' ? '#FFFFFF' : '#000000'}
+          color={getIconColor()}
           size="small"
         />
       ) : (
         <>
-          {icon && <Ionicons name={icon} size={16} color={variant === 'primary' ? '#FFFFFF' : '#000000'} />}
+          {icon && <Ionicons name={icon} size={16} color={getIconColor()} />}
           <Text style={getTextStyle()}>{label}</Text>
         </>
       )}
@@ -70,17 +82,17 @@ const styles = StyleSheet.create({
   button: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: theme.borderRadius.sm,
   },
   primaryButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
   },
   secondaryButton: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: colors.border,
   },
   dangerButton: {
     backgroundColor: 'transparent',
@@ -89,18 +101,18 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   text: {
-    marginLeft: 4,
-    fontSize: 12,
-    fontWeight: '500',
+    marginLeft: spacing.xs,
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.medium,
   },
   primaryText: {
-    color: '#FFFFFF',
+    color: colors.textLight,
   },
   secondaryText: {
-    color: '#666',
+    color: colors.textSecondary,
   },
   dangerText: {
-    color: '#FF3B30',
+    color: colors.error,
   },
 });
 
