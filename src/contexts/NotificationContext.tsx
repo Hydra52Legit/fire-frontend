@@ -8,6 +8,11 @@ interface NotificationContextType {
   scheduleAllNotifications: () => Promise<void>;
   cancelAllNotifications: () => Promise<void>;
   isInitialized: boolean;
+  availabilityInfo: {
+    isExpoGo: boolean;
+    isEmulator: boolean;
+    isInitialized: boolean;
+  };
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -26,6 +31,11 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     dailySummary: true,
   });
   const [isInitialized, setIsInitialized] = useState(false);
+  const [availabilityInfo, setAvailabilityInfo] = useState({
+    isExpoGo: false,
+    isEmulator: false,
+    isInitialized: false,
+  });
 
   useEffect(() => {
     initializeNotifications();
@@ -36,21 +46,24 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
       const initialized = await NotificationService.initialize();
       setIsInitialized(initialized);
       
-      if (initialized) {
-        // ИСПРАВЛЕНО: Добавлен await
-        const savedPreferences = await NotificationService.getPreferences();
-        setPreferences(savedPreferences);
-      } else {
-        // В Expo Go просто загружаем настройки без инициализации
-        const savedPreferences = await NotificationService.getPreferences();
-        setPreferences(savedPreferences);
-      }
+      // Обновляем информацию о доступности
+      const info = NotificationService.getAvailabilityInfo();
+      setAvailabilityInfo(info);
+      
+      // Всегда загружаем настройки, даже если уведомления недоступны
+      const savedPreferences = await NotificationService.getPreferences();
+      setPreferences(savedPreferences);
     } catch (error: any) {
       // Игнорируем ошибки Expo Go - они не критичны
       if (!error?.message?.includes('Expo Go') && !error?.message?.includes('development build')) {
         // Только логируем реальные ошибки
         console.error('Ошибка инициализации уведомлений:', error);
       }
+      
+      // Обновляем информацию о доступности даже при ошибке
+      const info = NotificationService.getAvailabilityInfo();
+      setAvailabilityInfo(info);
+      
       // Все равно загружаем настройки
       try {
         const savedPreferences = await NotificationService.getPreferences();
@@ -102,6 +115,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
       scheduleAllNotifications,
       cancelAllNotifications,
       isInitialized,
+      availabilityInfo,
     }}>
       {children}
     </NotificationContext.Provider>

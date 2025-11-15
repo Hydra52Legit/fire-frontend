@@ -68,19 +68,57 @@ const DEFAULT_PREFERENCES: NotificationPreference = {
 
 class NotificationService {
   private isInitialized = false;
+  private isExpoGoEnvironment = false;
+  private isEmulator = false;
+
+  // Проверка доступности уведомлений
+  async checkAvailability(): Promise<{ available: boolean; reason?: string }> {
+    try {
+      // Проверяем Expo Go
+      if (isExpoGo) {
+        this.isExpoGoEnvironment = true;
+        return {
+          available: false,
+          reason: 'Push-уведомления недоступны в Expo Go. Используйте development build для полной функциональности.',
+        };
+      }
+
+      // Проверяем эмулятор
+      if (!Device.isDevice) {
+        this.isEmulator = true;
+        return {
+          available: false,
+          reason: 'Уведомления работают только на реальных устройствах',
+        };
+      }
+
+      // Проверяем платформу Android
+      if (Platform.OS === 'android') {
+        // На Android уведомления должны работать
+        return { available: true };
+      }
+
+      return { available: true };
+    } catch (error: any) {
+      if (error?.message?.includes('Expo Go') || error?.message?.includes('development build')) {
+        return {
+          available: false,
+          reason: 'Push-уведомления недоступны в Expo Go',
+        };
+      }
+      return {
+        available: false,
+        reason: 'Не удалось проверить доступность уведомлений',
+      };
+    }
+  }
 
   // Инициализация сервиса уведомлений
   async initialize(): Promise<boolean> {
     try {
-      // Отключаем push-уведомления в Expo Go (они не поддерживаются в SDK 53+)
-      if (isExpoGo) {
-        // Не логируем ошибку, просто возвращаем false
-        this.isInitialized = false;
-        return false;
-      }
-
-      if (!Device.isDevice) {
-        // Не логируем в dev режиме
+      const availability = await this.checkAvailability();
+      
+      if (!availability.available) {
         this.isInitialized = false;
         return false;
       }
@@ -132,6 +170,15 @@ class NotificationService {
       console.error('Ошибка инициализации уведомлений:', error);
       return false;
     }
+  }
+
+  // Получение информации о доступности
+  getAvailabilityInfo(): { isExpoGo: boolean; isEmulator: boolean; isInitialized: boolean } {
+    return {
+      isExpoGo: this.isExpoGoEnvironment,
+      isEmulator: this.isEmulator,
+      isInitialized: this.isInitialized,
+    };
   }
 
   // Получение настроек уведомлений

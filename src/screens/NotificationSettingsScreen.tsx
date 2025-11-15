@@ -15,12 +15,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../types/navigation';
 import { useNotification } from '../contexts/NotificationContext';
 import { NotificationPreference } from '../services/notificationService';
+import { colors, spacing, typography, theme } from '../theme';
 
 type NotificationSettingsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'NotificationSettings'>;
 
 export default function NotificationSettingsScreen() {
   const navigation = useNavigation<NotificationSettingsScreenNavigationProp>();
-  const { preferences, updatePreferences, scheduleAllNotifications, cancelAllNotifications, isInitialized } = useNotification();
+  const { preferences, updatePreferences, scheduleAllNotifications, cancelAllNotifications, isInitialized, availabilityInfo } = useNotification();
   
   const [localPreferences, setLocalPreferences] = useState<NotificationPreference>(preferences);
 
@@ -46,15 +47,20 @@ export default function NotificationSettingsScreen() {
     }));
   };
 
-  if (!isInitialized) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>
-          Уведомления не доступны на этом устройстве
-        </Text>
-      </View>
-    );
-  }
+  const getAvailabilityMessage = () => {
+    if (availabilityInfo.isExpoGo) {
+      return 'Push-уведомления недоступны в Expo Go. Используйте development build для полной функциональности. Настройки будут сохранены и применятся при использовании development build.';
+    }
+    if (availabilityInfo.isEmulator) {
+      return 'Уведомления работают только на реальных устройствах. Настройки будут сохранены.';
+    }
+    if (!isInitialized) {
+      return 'Уведомления временно недоступны. Настройки будут сохранены.';
+    }
+    return null;
+  };
+
+  const availabilityMessage = getAvailabilityMessage();
 
   return (
     <ScrollView style={styles.container}>
@@ -62,6 +68,14 @@ export default function NotificationSettingsScreen() {
         <Text style={styles.title}>Настройки уведомлений</Text>
         <Text style={styles.subtitle}>Управление push-уведомлениями системы</Text>
       </View>
+
+      {/* Информационное сообщение о доступности */}
+      {availabilityMessage && (
+        <View style={styles.infoBanner}>
+          <Ionicons name="information-circle" size={20} color={colors.info} />
+          <Text style={styles.infoText}>{availabilityMessage}</Text>
+        </View>
+      )}
 
       {/* Основные настройки */}
       <View style={styles.section}>
@@ -75,6 +89,7 @@ export default function NotificationSettingsScreen() {
           <Switch
             value={localPreferences.pushEnabled}
             onValueChange={(value) => setLocalPreferences(prev => ({ ...prev, pushEnabled: value }))}
+            disabled={!isInitialized}
           />
         </View>
 
@@ -131,14 +146,26 @@ export default function NotificationSettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Действия</Text>
         
-        <TouchableOpacity style={styles.actionButton} onPress={scheduleAllNotifications}>
-          <Ionicons name="notifications" size={20} color="#007AFF" />
-          <Text style={styles.actionButtonText}>Запланировать все уведомления</Text>
+        <TouchableOpacity 
+          style={[styles.actionButton, !isInitialized && styles.actionButtonDisabled]} 
+          onPress={scheduleAllNotifications}
+          disabled={!isInitialized}
+        >
+          <Ionicons name="notifications" size={20} color={isInitialized ? colors.primary : colors.textTertiary} />
+          <Text style={[styles.actionButtonText, !isInitialized && styles.actionButtonTextDisabled]}>
+            Запланировать все уведомления
+          </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionButton} onPress={cancelAllNotifications}>
-          <Ionicons name="notifications-off" size={20} color="#FF3B30" />
-          <Text style={styles.actionButtonText}>Отменить все уведомления</Text>
+        <TouchableOpacity 
+          style={[styles.actionButton, !isInitialized && styles.actionButtonDisabled]} 
+          onPress={cancelAllNotifications}
+          disabled={!isInitialized}
+        >
+          <Ionicons name="notifications-off" size={20} color={isInitialized ? colors.error : colors.textTertiary} />
+          <Text style={[styles.actionButtonText, !isInitialized && styles.actionButtonTextDisabled]}>
+            Отменить все уведомления
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -155,58 +182,73 @@ export default function NotificationSettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background,
   },
   header: {
-    padding: 16,
+    padding: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#F2F2F7',
+    borderBottomColor: colors.borderLight,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000000',
-    marginBottom: 4,
+    fontSize: typography.sizes.xxl,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginBottom: spacing.xs,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: typography.sizes.md,
+    color: colors.textSecondary,
+  },
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: colors.infoLight,
+    padding: spacing.md,
+    margin: spacing.lg,
+    borderRadius: theme.borderRadius.md,
+    gap: spacing.sm,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: typography.sizes.sm,
+    color: colors.info,
+    lineHeight: typography.sizes.md * typography.lineHeights.normal,
   },
   section: {
-    padding: 16,
+    padding: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#F2F2F7',
+    borderBottomColor: colors.borderLight,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000000',
-    marginBottom: 8,
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginBottom: spacing.sm,
   },
   sectionDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 16,
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.lg,
   },
   settingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: spacing.md,
   },
   settingInfo: {
     flex: 1,
-    marginRight: 16,
+    marginRight: spacing.lg,
   },
   settingTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.text,
     marginBottom: 2,
   },
   settingDescription: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
   },
   daysGrid: {
     flexDirection: 'row',
@@ -214,57 +256,57 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dayButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
     borderRadius: 20,
-    backgroundColor: '#F8F8F8',
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: colors.border,
   },
   dayButtonSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   dayButtonText: {
-    fontSize: 14,
-    color: '#000000',
+    fontSize: typography.sizes.sm,
+    color: colors.text,
   },
   dayButtonTextSelected: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: colors.textLight,
+    fontWeight: typography.weights.semibold,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#F8F8F8',
-    borderRadius: 8,
-    marginBottom: 8,
-    gap: 12,
+    padding: spacing.lg,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: theme.borderRadius.md,
+    marginBottom: spacing.sm,
+    gap: spacing.md,
+  },
+  actionButtonDisabled: {
+    opacity: 0.5,
   },
   actionButtonText: {
-    fontSize: 16,
-    color: '#000000',
-    fontWeight: '500',
+    fontSize: typography.sizes.md,
+    color: colors.text,
+    fontWeight: typography.weights.medium,
+  },
+  actionButtonTextDisabled: {
+    color: colors.textTertiary,
   },
   footer: {
-    padding: 16,
+    padding: spacing.lg,
   },
   saveButton: {
-    backgroundColor: '#007AFF',
-    padding: 16,
-    borderRadius: 8,
+    backgroundColor: colors.primary,
+    padding: spacing.lg,
+    borderRadius: theme.borderRadius.md,
     alignItems: 'center',
   },
   saveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  errorText: {
-    textAlign: 'center',
-    color: '#FF3B30',
-    fontSize: 16,
-    marginTop: 20,
+    color: colors.textLight,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
   },
 });
